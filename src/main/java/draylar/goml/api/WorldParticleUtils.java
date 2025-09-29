@@ -38,9 +38,9 @@ public class WorldParticleUtils {
     }
 
     private static void spawnParticleIfVisible(ServerPlayerEntity player, ParticleEffect effect, double x, double y, double z) {
-        ServerWorld world = player.getWorld();
+        ServerWorld world = player.getEntityWorld();
 
-        Vec3d delta = player.getPos().subtract(x, y, z);
+        Vec3d delta = player.getEntityPos().subtract(x, y, z);
         double length2 = delta.lengthSquared();
         if (length2 > 512 * 512) {
             return;

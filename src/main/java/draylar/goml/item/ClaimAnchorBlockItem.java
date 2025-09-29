@@ -32,7 +32,7 @@ public class ClaimAnchorBlockItem extends TooltippedBlockItem {
 
     @Override
     protected boolean canPlace(ItemPlacementContext context, BlockState state) {
-        if (context.getWorld().isClient) {
+        if (context.getWorld().isClient()) {
             return true;
         }
 

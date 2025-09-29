@@ -29,12 +29,12 @@ public abstract class TntEntityMixin extends Entity {
 
     @Inject(at = @At("HEAD"), method = "explode", cancellable = true)
     private void goml_attemptExplosion(CallbackInfo ci) {
-        if (getWorld().isClient) {
+        if (getEntityWorld().isClient()) {
             return;
         }
         if (this.causingEntity != null) {
-            var claimsFound = ClaimUtils.getClaimsAt(getWorld(), getBlockPos());
-            var entity = this.causingEntity.resolve(getWorld(), LivingEntity.class);
+            var claimsFound = ClaimUtils.getClaimsAt(getEntityWorld(), getBlockPos());
+            var entity = LazyEntityReference.getLivingEntity(this.causingEntity, getEntityWorld());
             if (entity instanceof PlayerEntity player) {
                 if (!claimsFound.isEmpty()) {
                     boolean noPermission = claimsFound.anyMatch((Entry<ClaimBox, Claim> boxInfo) -> !boxInfo.getValue().hasPermission(player));

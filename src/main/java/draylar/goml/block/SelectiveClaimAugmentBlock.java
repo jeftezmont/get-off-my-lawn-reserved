@@ -78,7 +78,7 @@ public class SelectiveClaimAugmentBlock extends ClaimAugmentBlock {
                         PagedGui.playClickSound(player);
                         var mode = currentMode.getNext();
                         claim.setData(key, mode);
-                        for (var p : claim.getPlayersIn(player.getServer())) {
+                        for (var p : claim.getPlayersIn(player.getEntityWorld().getServer())) {
                             this.removeEffect(player);
 
                             if (this.canApply(claim, p)) {

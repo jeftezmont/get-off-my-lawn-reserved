@@ -157,7 +157,7 @@ public class ClaimAugmentBlock extends Block implements Augment, BlockEntityProv
 
     @Override
     public BlockState onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
-        if (!world.isClient && world.getBlockEntity(pos) instanceof ClaimAugmentBlockEntity be) {
+        if (!world.isClient() && world.getBlockEntity(pos) instanceof ClaimAugmentBlockEntity be) {
             be.remove();
         }
 

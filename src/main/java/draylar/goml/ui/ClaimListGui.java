@@ -27,10 +27,10 @@ public class ClaimListGui extends PagedGui {
     protected ClaimListGui(ServerPlayerEntity player, GameProfile target) {
         super(player, null);
 
-        ClaimUtils.getClaimsWithAccess(player.getWorld(), target.getId()).forEach(this.claimList::add);
+        ClaimUtils.getClaimsWithAccess(player.getEntityWorld(), target.id()).forEach(this.claimList::add);
         this.setTitle(Text.translatable(
-                player.getGameProfile().getId().equals(target.getId()) ? "text.goml.your_claims" : "text.goml.someones_claims",
-                target.getName()
+                player.getGameProfile().id().equals(target.id()) ? "text.goml.your_claims" : "text.goml.someones_claims",
+                target.name()
         ));
 
         this.updateDisplay();
@@ -48,7 +48,7 @@ public class ClaimListGui extends PagedGui {
     @Override
     protected DisplayElement getElement(int id) {
         if (this.claimList.size() > id) {
-            var server = this.player.getServer();
+            var server = this.player.getEntityWorld().getServer();
             var entry = this.claimList.get(id);
             var claim = entry.getValue();
 

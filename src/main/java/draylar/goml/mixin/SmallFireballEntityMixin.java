@@ -22,7 +22,7 @@ public abstract class SmallFireballEntityMixin extends AbstractFireballEntity {
 
     @WrapWithCondition(method = "onBlockHit", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;setBlockState(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;)Z"))
     private boolean safeSetBlock(World world, BlockPos pos, BlockState state) {
-        if (world.isClient) {
+        if (world.isClient()) {
             return true;
         }
         return ClaimUtils.canExplosionDestroy(world, pos, this);

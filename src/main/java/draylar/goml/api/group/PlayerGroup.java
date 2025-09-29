@@ -3,6 +3,7 @@ package draylar.goml.api.group;
 import com.mojang.authlib.GameProfile;
 import draylar.goml.api.Claim;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.PlayerConfigEntry;
 import net.minecraft.text.Text;
 
 import java.util.List;
@@ -21,7 +22,7 @@ public interface PlayerGroup {
     boolean addClaim(Claim claim);
     boolean removeClaim(Claim claim);
 
-    record Member(GameProfile profile, String role) {}
+    record Member(PlayerConfigEntry profile, String role) {}
 
     record Key(String providerId, String groupId) {
         public String compact() {

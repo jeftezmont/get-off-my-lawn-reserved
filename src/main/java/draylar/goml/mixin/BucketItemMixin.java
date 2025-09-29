@@ -41,7 +41,7 @@ public class BucketItemMixin extends Item {
 
     @Inject(at = @At("HEAD"), method = "use", cancellable = true)
     private void goml_preventBucketUsageInClaims(World world, PlayerEntity user, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
-        if (world.isClient) {
+        if (world.isClient()) {
             return;
         }
 

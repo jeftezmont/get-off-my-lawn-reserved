@@ -76,6 +76,7 @@
   "text.goml.gui.force_field.player_list": "影响的玩家...",
   "text.goml.gui.force_field.whitelist_mode": "白名单模式：%s",
   "text.goml.gui.force_field.add_player.title": "将玩家添加到列表",
+  "text.goml.gui.shared_groups": "共享组：",
   "text.goml.mode.everyone": "所有人",
   "text.goml.mode.trusted": "仅受信任的人",
   "text.goml.mode.untrusted": "仅不受信任的人",
@@ -127,5 +128,9 @@
   "text.goml.admin_mode.enabled": "已启用管理员模式！您现在可以修改其他玩家的领地！",
   "text.goml.admin_mode.disabled": "已禁用管理员模式！您无法再修改其他玩家的领地！",
   "text.goml.changed_greeting": "您的领地问候语已更改为：%s",
-  "text.goml.disabled_augment": "此物品已被禁用！"
+  "text.goml.disabled_augment": "此物品已被禁用！",
+  "text.goml.vanilla_team.display": "队伍：%s",
+  "text.goml.vanilla_team.name": "Minecraft 团队",
+  "text.goml.argonauts.guild_type.display": "公会: %s",
+  "text.goml.argonauts.guild_type.name": "阿尔戈英雄公会"
 }

@@ -26,7 +26,7 @@ public class PlaceholdersReg {
                 wildnessText = TextParserUtils.formatText(arg);
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
 
             if (claims.size() == 0) {
                 return PlaceholderResult.value(wildnessText);
@@ -35,10 +35,10 @@ public class PlaceholdersReg {
 
                 List<String> owners = new ArrayList<>();
                 for (UUID owner : claim.getValue().getOwners()) {
-                    Optional<GameProfile> profile = ctx.server().getUserCache().getByUuid(owner);
+                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
 
                     if (profile.isPresent()) {
-                        owners.add(profile.get().getName());
+                        owners.add(profile.get().name());
                     }
                 }
 
@@ -57,7 +57,7 @@ public class PlaceholdersReg {
                 wildnessText = TextParserUtils.formatText(arg);
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
 
             if (claims.size() == 0) {
                 return PlaceholderResult.value(wildnessText);
@@ -66,10 +66,10 @@ public class PlaceholdersReg {
 
                 List<String> owners = new ArrayList<>();
                 for (UUID owner : claim.getValue().getOwners()) {
-                    Optional<GameProfile> profile = ctx.server().getUserCache().getByUuid(owner);
+                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
 
                     if (profile.isPresent()) {
-                        owners.add(profile.get().getId().toString());
+                        owners.add(profile.get().id().toString());
                     }
                 }
 
@@ -89,7 +89,7 @@ public class PlaceholdersReg {
                 wildnessText = TextParserUtils.formatText(arg);
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
 
             if (claims.size() == 0) {
                 return PlaceholderResult.value(wildnessText);
@@ -98,10 +98,10 @@ public class PlaceholdersReg {
 
                 List<String> trusted = new ArrayList<>();
                 for (UUID owner : claim.getValue().getTrusted()) {
-                    Optional<GameProfile> profile = ctx.server().getUserCache().getByUuid(owner);
+                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
 
                     if (profile.isPresent()) {
-                        trusted.add(profile.get().getName());
+                        trusted.add(profile.get().name());
                     }
                 }
 
@@ -121,7 +121,7 @@ public class PlaceholdersReg {
                 wildnessText = TextParserUtils.formatText(arg);
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
 
             if (claims.size() == 0) {
                 return PlaceholderResult.value(wildnessText);
@@ -130,10 +130,10 @@ public class PlaceholdersReg {
 
                 List<String> trusted = new ArrayList<>();
                 for (UUID owner : claim.getValue().getTrusted()) {
-                    Optional<GameProfile> profile = ctx.server().getUserCache().getByUuid(owner);
+                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
 
                     if (profile.isPresent()) {
-                        trusted.add(profile.get().getId().toString());
+                        trusted.add(profile.get().id().toString());
                     }
                 }
 
@@ -166,7 +166,7 @@ public class PlaceholdersReg {
                 }
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
 
 
             if (claims.size() == 0) {
@@ -178,21 +178,21 @@ public class PlaceholdersReg {
                 List<String> ownersUuid = new ArrayList<>();
 
                 for (UUID owner : claim.getValue().getOwners()) {
-                    Optional<GameProfile> profile = ctx.server().getUserCache().getByUuid(owner);
+                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
 
                     if (profile.isPresent()) {
-                        owners.add(profile.get().getName());
-                        ownersUuid.add(profile.get().getId().toString());
+                        owners.add(profile.get().name());
+                        ownersUuid.add(profile.get().id().toString());
                     }
                 }
                 List<String> trusted = new ArrayList<>();
                 List<String> trustedUuid = new ArrayList<>();
                 for (UUID owner : claim.getValue().getTrusted()) {
-                    Optional<GameProfile> profile = ctx.server().getUserCache().getByUuid(owner);
+                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
 
                     if (profile.isPresent()) {
-                        trusted.add(profile.get().getName());
-                        trustedUuid.add(profile.get().getId().toString());
+                        trusted.add(profile.get().name());
+                        trustedUuid.add(profile.get().id().toString());
                     }
                 }
 

@@ -21,6 +21,7 @@ import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.ScreenTexts;
+import net.minecraft.server.PlayerConfigEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.MutableText;
@@ -51,21 +52,21 @@ public class ForceFieldAugmentBlock extends ClaimAugmentBlock {
 
     @Override
     public void onPlayerEnter(Claim claim, PlayerEntity player) {
-        if (shouldBlock(claim, player) && claim.getClaimBox().minecraftBox().contains(player.getPos())) {
-            Pair<Vec3d, Direction> pair = ClaimUtils.getClosestXZBorder(claim, player.getPos(), 2);
+        if (shouldBlock(claim, player) && claim.getClaimBox().minecraftBox().contains(player.getEntityPos())) {
+            Pair<Vec3d, Direction> pair = ClaimUtils.getClosestXZBorder(claim, player.getEntityPos(), 2);
             int distance = 0;
             while (true) {
-                var i = shouldBlock(player.getWorld(), pair.getLeft(), player);
+                var i = shouldBlock(player.getEntityWorld(), pair.getLeft(), player);
 
                 if (i == -1) {
                     break;
                 }
                 distance += i;
-                pair = ClaimUtils.getClosestXZBorder(claim, player.getPos(), 2 + distance);
+                pair = ClaimUtils.getClosestXZBorder(claim, player.getEntityPos(), 2 + distance);
             }
 
 
-            var pairPart = ClaimUtils.getClosestXZBorder(claim, player.getPos(), distance);
+            var pairPart = ClaimUtils.getClosestXZBorder(claim, player.getEntityPos(), distance);
 
             var pos = pair.getLeft();
             var dir = pair.getRight();
@@ -75,7 +76,7 @@ public class ForceFieldAugmentBlock extends ClaimAugmentBlock {
 
             for (int x = -1; x <= 1; x++) {
                 for (int y = -1; y <= 1; y++) {
-                    ((ServerWorld) player.getWorld()).spawnParticles(
+                    ((ServerWorld) player.getEntityWorld()).spawnParticles(
                             (ServerPlayerEntity) player, new BlockStateParticleEffect(ParticleTypes.BLOCK_MARKER, Blocks.BARRIER.getDefaultState()), true, true,
                             pos2.x + dir2.getOffsetZ() * x, player.getEyeY() + y, pos2.z + dir2.getOffsetX() * x,
                             1,
@@ -86,10 +87,10 @@ public class ForceFieldAugmentBlock extends ClaimAugmentBlock {
             }
 
             double y;
-            if (player.getWorld().isSpaceEmpty(player, player.getDimensions(player.getPose()).getBoxAt(pos.x, player.getY(), pos.z))) {
+            if (player.getEntityWorld().isSpaceEmpty(player, player.getDimensions(player.getPose()).getBoxAt(pos.x, player.getY(), pos.z))) {
                 y = player.getY();
             } else {
-                y = player.getWorld().getTopY(Heightmap.Type.MOTION_BLOCKING, (int) pos.x, (int) pos.z);
+                y = player.getEntityWorld().getTopY(Heightmap.Type.MOTION_BLOCKING, (int) pos.x, (int) pos.z);
             }
 
             player.teleport(pos.x, y, pos.z, true);
@@ -97,7 +98,7 @@ public class ForceFieldAugmentBlock extends ClaimAugmentBlock {
             player.setVelocity(Vec3d.of(dir.getVector()).multiply(0.2));
 
             if (player.hasVehicle()) {
-                player.getVehicle().teleport((ServerWorld) player.getVehicle().getWorld(), pos.x, y, pos.z, PositionFlag.VALUES, player.getVehicle().getYaw(), player.getVehicle().getPitch(), false);
+                player.getVehicle().teleport((ServerWorld) player.getVehicle().getEntityWorld(), pos.x, y, pos.z, PositionFlag.VALUES, player.getVehicle().getYaw(), player.getVehicle().getPitch(), false);
                 player.getVehicle().setVelocity(Vec3d.of(dir.getVector()).multiply(0.2));
             }
 
@@ -247,8 +248,8 @@ public class ForceFieldAugmentBlock extends ClaimAugmentBlock {
                             new GenericPlayerSelectionGui(
                                     this.player,
                                     Text.translatable("text.goml.gui.force_field.add_player.title"),
-                                    (p) -> !this.claim.hasDirectPermission(p.getId()) && !this.claim.getData(UUID_KEY).contains(p.getId()),
-                                    (p) -> this.claim.getData(UUID_KEY).add(p.getId()),
+                                    (p) -> !this.claim.hasDirectPermission(p.id()) && !this.claim.getData(UUID_KEY).contains(p.id()),
+                                    (p) -> this.claim.getData(UUID_KEY).add(p.id()),
                                     this::refreshOpen).updateAndOpen();
                         }));
                 default -> super.getNavElement(id);
@@ -256,7 +257,7 @@ public class ForceFieldAugmentBlock extends ClaimAugmentBlock {
         }
 
         @Override
-        protected void modifyBuilder(GuiElementBuilder builder, Optional<GameProfile> optional, UUID uuid) {
+        protected void modifyBuilder(GuiElementBuilder builder, Optional<PlayerConfigEntry> optional, UUID uuid) {
             builder.addLoreLine(Text.translatable("text.goml.gui.click_to_remove"));
             builder.setCallback((x, y, z) -> {
                 playClickSound(player);

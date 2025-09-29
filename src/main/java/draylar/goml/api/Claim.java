@@ -366,7 +366,7 @@ public class Claim {
 
         gui.addSlot(GuiElementBuilder.from(this.icon)
                 .setName(Text.translatable("text.goml.gui.claim.about"))
-                .setLore(ClaimUtils.getClaimText(player.getServer(), this))
+                .setLore(ClaimUtils.getClaimText(player.getEntityWorld().getServer(), this))
         );
 
         gui.addSlot(new GuiElementBuilder(Items.PLAYER_HEAD)

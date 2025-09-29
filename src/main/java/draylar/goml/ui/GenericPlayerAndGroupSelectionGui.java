@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import draylar.goml.api.group.PlayerGroup;
 import draylar.goml.api.group.PlayerGroupProvider;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
+import net.minecraft.server.PlayerConfigEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
@@ -20,8 +21,8 @@ public class GenericPlayerAndGroupSelectionGui extends GenericPlayerSelectionGui
     private final List<PlayerGroup> groups = new ArrayList<>();
 
 
-    public GenericPlayerAndGroupSelectionGui(ServerPlayerEntity player, Text title, Predicate<GameProfile> shouldDisplay,
-                                             Predicate<PlayerGroup> shouldDisplayGroup, Consumer<GameProfile> onClick, Consumer<PlayerGroup> onClickGroup, Runnable postClose) {
+    public GenericPlayerAndGroupSelectionGui(ServerPlayerEntity player, Text title, Predicate<PlayerConfigEntry> shouldDisplay,
+                                             Predicate<PlayerGroup> shouldDisplayGroup, Consumer<PlayerConfigEntry> onClick, Consumer<PlayerGroup> onClickGroup, Runnable postClose) {
         super(player, title, shouldDisplay, onClick, postClose);
         this.shouldDisplayGroup = shouldDisplayGroup;
         this.onClickGroup = onClickGroup;

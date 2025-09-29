@@ -34,17 +34,17 @@ public abstract class ProjectileEntityMixin extends Entity implements OriginOwne
 
     @Inject(method = "onCollision", at = @At("HEAD"), cancellable = true)
     private void preventEffects(HitResult hitResult, CallbackInfo ci) {
-        if (getWorld().isClient) {
+        if (this.getEntityWorld().isClient()) {
             return;
         }
-        if (!ClaimUtils.hasMatchingClaims(this.getWorld(), this.getBlockPos(), this.goml$getOriginSafe(), this.owner != null ? this.owner.getUuid() : null)) {
+        if (!ClaimUtils.hasMatchingClaims(this.getEntityWorld(), this.getBlockPos(), this.goml$getOriginSafe(), this.owner != null ? this.owner.getUuid() : null)) {
             ci.cancel();
         }
     }
 
     @Inject(method = "canModifyAt", at = @At("HEAD"), cancellable = true)
     private void preventModification(ServerWorld world, BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-        if (!ClaimUtils.hasMatchingClaims(this.getWorld(), this.getBlockPos(), this.goml$getOriginSafe(), this.owner != null ? this.owner.getUuid() : null)) {
+        if (!ClaimUtils.hasMatchingClaims(this.getEntityWorld(), this.getBlockPos(), this.goml$getOriginSafe(), this.owner != null ? this.owner.getUuid() : null)) {
             cir.setReturnValue(false);
         }
     }

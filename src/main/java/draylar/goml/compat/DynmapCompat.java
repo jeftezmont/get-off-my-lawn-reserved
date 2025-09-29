@@ -82,8 +82,8 @@ public class DynmapCompat {
     private static void updateClaimAreasOfPlayer(ServerPlayerEntity player, MinecraftServer server, MarkerAPI markerApi) {
         UUID uuid = player.getUuid();
         String name = player.getDisplayName().getString();
-        ClaimUtils.getClaimsOwnedBy(player.getWorld(), uuid).forEach(entry -> handleClaimAreaUpdate(entry.getValue(), server, markerApi, claimArea -> updateClaimAreaPlayerInfo(claimArea, uuid, name)));
-        ClaimUtils.getClaimsTrusted(player.getWorld(), uuid).forEach(entry -> handleClaimAreaUpdate(entry.getValue(), server, markerApi, claimArea -> updateClaimAreaPlayerInfo(claimArea, uuid, name)));
+        ClaimUtils.getClaimsOwnedBy(player.getEntityWorld(), uuid).forEach(entry -> handleClaimAreaUpdate(entry.getValue(), server, markerApi, claimArea -> updateClaimAreaPlayerInfo(claimArea, uuid, name)));
+        ClaimUtils.getClaimsTrusted(player.getEntityWorld(), uuid).forEach(entry -> handleClaimAreaUpdate(entry.getValue(), server, markerApi, claimArea -> updateClaimAreaPlayerInfo(claimArea, uuid, name)));
     }
 
     private static void updateClaimAreaPlayerInfo(AreaMarker claimArea, UUID uuid, String name) {
@@ -121,7 +121,7 @@ public class DynmapCompat {
     private static String getPlayers(Text key, Set<UUID> players, MinecraftServer server) {
         return players.isEmpty() ? "" : "<br>" + getLabelLine(key, players.stream().map(uuid -> {
             ServerPlayerEntity player = server.getPlayerManager().getPlayer(uuid);
-            return player == null ? server.getUserCache().getByUuid(uuid).map(gameProfile -> getPlayerDiv(gameProfile.getName())).orElseGet(() -> getValueDiv(uuid.toString())) : getPlayerDiv(player.getDisplayName().getString());
+            return player == null ? server.getApiServices().nameToIdCache().getByUuid(uuid).map(gameProfile -> getPlayerDiv(gameProfile.name())).orElseGet(() -> getValueDiv(uuid.toString())) : getPlayerDiv(player.getDisplayName().getString());
         }).reduce("", (prev, curr) -> prev + curr), true);
     }
 

@@ -56,7 +56,7 @@ public class EventHandlers {
 
     private static void registerInteractEntityCallback() {
         UseEntityCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, entity, entityHitResult) -> {
-            if (world.isClient) {
+            if (world.isClient()) {
                 return ActionResult.PASS;
             }
 
@@ -113,7 +113,7 @@ public class EventHandlers {
 
     private static void registerAttackEntityCallback() {
         AttackEntityCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, entity, entityHitResult) -> {
-            if (world.isClient) {
+            if (world.isClient()) {
                 return ActionResult.PASS;
             }
             return ClaimUtils.canDamageEntity(world, entity, world.getDamageSources().playerAttack(playerEntity)) ? ActionResult.PASS : ActionResult.FAIL;
@@ -122,7 +122,7 @@ public class EventHandlers {
 
     private static void registerInteractBlockCallback() {
         UseBlockCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, blockHitResult) -> {
-            if (world.isClient) {
+            if (world.isClient()) {
                 return ActionResult.PASS;
             }
             if (!(playerEntity.getStackInHand(hand).getItem() instanceof BlockItem)) {
@@ -148,7 +148,7 @@ public class EventHandlers {
 
     private static void registerBreakBlockCallback() {
         AttackBlockCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, blockPos, direction) -> {
-            if (world.isClient) {
+            if (world.isClient()) {
                 return ActionResult.PASS;
             }
             Selection<Entry<ClaimBox, Claim>> claimsFound = ClaimUtils.getClaimsAt(world, blockPos);
@@ -156,7 +156,7 @@ public class EventHandlers {
         });
 
         PlayerBlockBreakEvents.BEFORE.register(GOML_PHASE, (world, player, pos, state, blockEntity) -> {
-            if (world.isClient) {
+            if (world.isClient()) {
                 return true;
             }
             Selection<Entry<ClaimBox, Claim>> claimsFound = ClaimUtils.getClaimsAt(world, pos);
@@ -167,7 +167,7 @@ public class EventHandlers {
 
     private static void registerAnchorAttackCallback() {
         AttackBlockCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, blockPos, direction) -> {
-            if (world.isClient) {
+            if (world.isClient()) {
                 return ActionResult.PASS;
             }
             var be = world.getBlockEntity(blockPos);
@@ -184,7 +184,7 @@ public class EventHandlers {
 
     @ApiStatus.Internal
     public static ActionResult testPermission(Selection<Entry<ClaimBox, Claim>> claims, PlayerEntity player, Hand hand, BlockPos pos, PermissionReason reason) {
-        if (player.getWorld().isClient) {
+        if (player.getEntityWorld().isClient()) {
             return ActionResult.PASS;
         }
 
@@ -192,7 +192,7 @@ public class EventHandlers {
             boolean noPermission = claims.anyMatch((Entry<ClaimBox, Claim> boxInfo) -> !boxInfo.getValue().hasPermission(player));
 
             if (noPermission && !ClaimUtils.isInAdminMode(player)) {
-                ActionResult check = ClaimEvents.PERMISSION_DENIED.invoker().check(player, player.getWorld(), hand, pos, reason);
+                ActionResult check = ClaimEvents.PERMISSION_DENIED.invoker().check(player, player.getEntityWorld(), hand, pos, reason);
 
                 if (check.isAccepted() || check.equals(ActionResult.PASS)) {
                     player.sendMessage(reason.getReason(), true);

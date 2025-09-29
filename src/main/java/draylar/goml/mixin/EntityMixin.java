@@ -29,7 +29,7 @@ public abstract class EntityMixin implements OriginOwner {
 
     @Inject(method = "isAlwaysInvulnerableTo", at = @At("HEAD"), cancellable = true)
     private void goml$isInvulnerable(DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
-        if (this.world.isClient) {
+        if (this.world.isClient()) {
             return;
         }
 

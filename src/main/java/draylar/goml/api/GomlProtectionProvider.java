@@ -44,7 +44,7 @@ public final class GomlProtectionProvider implements ProtectionProvider {
             return ClaimUtils.canModify(world, pos, player);
         } else {
             var claims = ClaimUtils.getClaimsAt(world, pos);
-            return claims.isEmpty() || claims.anyMatch((c) -> c.getValue().hasPermission(profile.getId()));
+            return claims.isEmpty() || claims.anyMatch((c) -> c.getValue().hasPermission(profile.id()));
         }
     }
 
@@ -105,8 +105,8 @@ public final class GomlProtectionProvider implements ProtectionProvider {
                         obj.setValue(switch (claim.getData(GOMLBlocks.PVP_ARENA.getFirst().key)) {
                             case EVERYONE -> true;
                             case DISABLED -> player != null && ClaimUtils.isInAdminMode(player);
-                            case TRUSTED -> claim.hasPermission(profile.getId()) && claim.hasPermission(attackedPlayer);
-                            case UNTRUSTED -> !claim.hasPermission(profile.getId()) && !claim.hasPermission(attackedPlayer);
+                            case TRUSTED -> claim.hasPermission(profile.id()) && claim.hasPermission(attackedPlayer);
+                            case UNTRUSTED -> !claim.hasPermission(profile.id()) && !claim.hasPermission(attackedPlayer);
                         });
                     });
 

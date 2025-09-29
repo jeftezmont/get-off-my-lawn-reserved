@@ -174,24 +174,24 @@ public class ClaimCommand {
     }
 
     private static int escape(CommandContext<ServerCommandSource> context, ServerPlayerEntity player) {
-        var claims = ClaimUtils.getClaimsAt(player.getWorld(), player.getBlockPos()).filter(x -> !x.getValue().hasPermission(player));
+        var claims = ClaimUtils.getClaimsAt(player.getEntityWorld(), player.getBlockPos()).filter(x -> !x.getValue().hasPermission(player));
 
         if (claims.isNotEmpty()) {
             claims.forEach((claim) -> {
-                if (!claim.getKey().minecraftBox().contains(player.getPos())) {
+                if (!claim.getKey().minecraftBox().contains(player.getEntityPos())) {
                     return;
                 }
 
-                var pair = ClaimUtils.getClosestXZBorder(claim.getValue(), player.getPos(), 1);
+                var pair = ClaimUtils.getClosestXZBorder(claim.getValue(), player.getEntityPos(), 1);
 
                 var pos = pair.getLeft();
                 var dir = pair.getRight();
 
                 double y;
-                if (player.getWorld().isSpaceEmpty(player, player.getDimensions(player.getPose()).getBoxAt(pos.x, player.getY(), pos.z))) {
+                if (player.getEntityWorld().isSpaceEmpty(player, player.getDimensions(player.getPose()).getBoxAt(pos.x, player.getY(), pos.z))) {
                     y = player.getY();
                 } else {
-                    y = player.getWorld().getTopY(Heightmap.Type.MOTION_BLOCKING, (int) pos.x, (int) pos.z);
+                    y = player.getEntityWorld().getTopY(Heightmap.Type.MOTION_BLOCKING, (int) pos.x, (int) pos.z);
                 }
 
                 player.teleport(pos.x, y, pos.z, true);
@@ -199,7 +199,7 @@ public class ClaimCommand {
                 player.setVelocity(Vec3d.of(dir.getVector()).multiply(0.2));
 
                 if (player.hasVehicle()) {
-                    player.getVehicle().teleport((ServerWorld) player.getVehicle().getWorld(), pos.x, y, pos.z, PositionFlag.VALUES, player.getVehicle().getYaw(), player.getVehicle().getPitch(), false);
+                    player.getVehicle().teleport((ServerWorld) player.getVehicle().getEntityWorld(), pos.x, y, pos.z, PositionFlag.VALUES, player.getVehicle().getYaw(), player.getVehicle().getPitch(), false);
                     player.getVehicle().setVelocity(Vec3d.of(dir.getVector()).multiply(0.2));
                 }
 
@@ -278,8 +278,8 @@ public class ClaimCommand {
 
                         while (iter.hasNext()) {
                             var uuid = iter.next();
-                            var gameProfile = context.getSource().getServer().getUserCache().getByUuid(uuid);
-                            owners.append(Text.literal((gameProfile.isPresent() ? gameProfile.get().getName() : "<unknown>") + " -> " + uuid.toString())
+                            var gameProfile = context.getSource().getServer().getApiServices().nameToIdCache().getByUuid(uuid);
+                            owners.append(Text.literal((gameProfile.isPresent() ? gameProfile.get().name() : "<unknown>") + " -> " + uuid.toString())
                                     .setStyle(Style.EMPTY
                                             .withColor(Formatting.GRAY)
                                             .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to copy")))
@@ -300,8 +300,8 @@ public class ClaimCommand {
 
                         while (iter.hasNext()) {
                             var uuid = iter.next();
-                            var gameProfile = context.getSource().getServer().getUserCache().getByUuid(uuid);
-                            trusted.append(Text.literal((gameProfile.isPresent() ? gameProfile.get().getName() : "<unknown>") + " -> " + uuid.toString())
+                            var gameProfile = context.getSource().getServer().getApiServices().nameToIdCache().getByUuid(uuid);
+                            trusted.append(Text.literal((gameProfile.isPresent() ? gameProfile.get().name() : "<unknown>") + " -> " + uuid.toString())
                                     .setStyle(Style.EMPTY
                                             .withColor(Formatting.GRAY)
                                             .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to copy")))
@@ -417,7 +417,7 @@ public class ClaimCommand {
     private static int openGui(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         var player = context.getSource().getPlayer();
 
-        var claim = ClaimUtils.getClaimsAt(player.getWorld(), player.getBlockPos());
+        var claim = ClaimUtils.getClaimsAt(player.getEntityWorld(), player.getBlockPos());
 
         if (claim.isEmpty()) {
             player.sendMessage(prefix(Text.translatable("text.goml.command.no_claims").formatted(Formatting.RED)), false);
@@ -440,14 +440,14 @@ public class ClaimCommand {
             ClaimUtils.getClaimsAt(world, player.getBlockPos()).forEach(claimedArea -> {
                 for (var toAdd : toAddCol) {
                     if (skipChecks || claimedArea.getValue().isOwner(player)) {
-                        if (owner && !claimedArea.getValue().isOwner(toAdd.getId())) {
-                            claimedArea.getValue().addOwner(toAdd.getId());
-                            player.sendMessage(prefix(Text.translatable("text.goml.command.owner_added", toAdd.getName())), false);
-                        } else if (!owner && !claimedArea.getValue().getTrusted().contains(toAdd.getId())) {
-                            claimedArea.getValue().trust(toAdd.getId());
-                            player.sendMessage(prefix(Text.translatable("text.goml.command.trusted", toAdd.getName())), false);
+                        if (owner && !claimedArea.getValue().isOwner(toAdd.id())) {
+                            claimedArea.getValue().addOwner(toAdd.id());
+                            player.sendMessage(prefix(Text.translatable("text.goml.command.owner_added", toAdd.name())), false);
+                        } else if (!owner && !claimedArea.getValue().getTrusted().contains(toAdd.id())) {
+                            claimedArea.getValue().trust(toAdd.id());
+                            player.sendMessage(prefix(Text.translatable("text.goml.command.trusted", toAdd.name())), false);
                         } else {
-                            player.sendMessage(prefix(Text.translatable("text.goml.command.already_added", toAdd.getName())), false);
+                            player.sendMessage(prefix(Text.translatable("text.goml.command.already_added", toAdd.name())), false);
                         }
                     }
                 }
@@ -467,20 +467,20 @@ public class ClaimCommand {
         ClaimUtils.getClaimsAt(world, player.getBlockPos()).forEach(claimedArea -> {
             for (var toRemove : toRemoveCol) {
 
-                if (toRemove.getId().equals(player.getUuid()) && !ClaimUtils.isInAdminMode(player)) {
+                if (toRemove.id().equals(player.getUuid()) && !ClaimUtils.isInAdminMode(player)) {
                     player.sendMessage(prefix(Text.translatable("text.goml.command.remove_self")), false);
                     return;
                 }
 
                 if (claimedArea.getValue().isOwner(player)) {
                     if (owner) {
-                        claimedArea.getValue().getOwners().remove(toRemove.getId());
+                        claimedArea.getValue().getOwners().remove(toRemove.id());
                     } else {
-                        claimedArea.getValue().untrust(toRemove.getId());
+                        claimedArea.getValue().untrust(toRemove.id());
                     }
 
 
-                    player.sendMessage(prefix(Text.translatable("text.goml.command." + (owner ? "owner_removed" : "untrusted"), toRemove.getName())), false);
+                    player.sendMessage(prefix(Text.translatable("text.goml.command." + (owner ? "owner_removed" : "untrusted"), toRemove.name())), false);
                 }
             }
         });

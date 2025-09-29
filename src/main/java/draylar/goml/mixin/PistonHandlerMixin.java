@@ -31,7 +31,7 @@ public class PistonHandlerMixin {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void storeClaimInfo(World world, BlockPos pos, Direction dir, boolean retracted, CallbackInfo ci) {
-        if (world.isClient) {
+        if (world.isClient()) {
             return;
         }
         var claims = ClaimUtils.getClaimsAt(world, pos);
@@ -45,7 +45,7 @@ public class PistonHandlerMixin {
 
     @ModifyReturnValue(method = "calculatePush", at = @At("RETURN"))
     private boolean preventMovement(boolean value) {
-        if (world.isClient) {
+        if (world.isClient()) {
             return value;
         }
         if (value) {

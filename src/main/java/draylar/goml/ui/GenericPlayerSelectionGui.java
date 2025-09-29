@@ -6,6 +6,7 @@ import draylar.goml.registry.GOMLTextures;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import net.minecraft.item.Items;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.PlayerConfigEntry;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Style;
@@ -20,16 +21,16 @@ import java.util.function.Predicate;
 @ApiStatus.Internal
 public class GenericPlayerSelectionGui extends PagedGui {
     private final PlayerManager playerManager;
-    private final Predicate<GameProfile> shouldDisplay;
-    private final Consumer<GameProfile> onClick;
+    private final Predicate<PlayerConfigEntry> shouldDisplay;
+    private final Consumer<PlayerConfigEntry> onClick;
     private int ticker;
-    private List<GameProfile> cachedPlayers = Collections.emptyList();
+    private List<PlayerConfigEntry> cachedPlayers = Collections.emptyList();
 
-    public GenericPlayerSelectionGui(ServerPlayerEntity player, Text title, Predicate<GameProfile> shouldDisplay, Consumer<GameProfile> onClick, Runnable postClose) {
+    public GenericPlayerSelectionGui(ServerPlayerEntity player, Text title, Predicate<PlayerConfigEntry> shouldDisplay, Consumer<PlayerConfigEntry> onClick, Runnable postClose) {
         super(player, postClose);
         this.shouldDisplay = shouldDisplay;
         this.onClick = onClick;
-        this.playerManager = Objects.requireNonNull(player.getServer()).getPlayerManager();
+        this.playerManager = Objects.requireNonNull(player.getEntityWorld().getServer()).getPlayerManager();
         this.setTitle(title);
     }
 
@@ -49,10 +50,10 @@ public class GenericPlayerSelectionGui extends PagedGui {
 
     @Override
     protected void updateDisplay() {
-        List<GameProfile> list = new ArrayList<>();
+        List<PlayerConfigEntry> list = new ArrayList<>();
         for (var p : this.playerManager.getPlayerList()) {
-            if (this.shouldDisplay.test(p.getGameProfile())) {
-                list.add(p.getGameProfile());
+            if (this.shouldDisplay.test(p.getPlayerConfigEntry())) {
+                list.add(p.getPlayerConfigEntry());
             }
         }
 
@@ -65,7 +66,7 @@ public class GenericPlayerSelectionGui extends PagedGui {
         }
 
 
-        list.sort(Comparator.comparing((player) -> player.getName()));
+        list.sort(Comparator.comparing(PlayerConfigEntry::name));
         this.cachedPlayers = list;
         super.updateDisplay();
     }
@@ -79,15 +80,15 @@ public class GenericPlayerSelectionGui extends PagedGui {
         if (this.cachedPlayers.size() > id) {
             var player = this.cachedPlayers.get(id);
             var b = new GuiElementBuilder(Items.PLAYER_HEAD)
-                    .setName(Text.literal(player.getName()))
-                    .setSkullOwner(player, null)
+                    .setName(Text.literal(player.name()))
+                    .setProfile(player.id())
                     .setCallback((x, y, z) -> {
                         playClickSound(this.player);
                         this.onClick.accept(player);
                         this.close(this.closeCallback != null);
                     });
 
-            var x = PlayerGroupProvider.getShared(this.player, player.getId());
+            var x = PlayerGroupProvider.getShared(this.player, player.id());
 
             if (!x.isEmpty()) {
                 b.addLoreLine(Text.translatable("text.goml.gui.shared_groups").formatted(Formatting.GOLD));

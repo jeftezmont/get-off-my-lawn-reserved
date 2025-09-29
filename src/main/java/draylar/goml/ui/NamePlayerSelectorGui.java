@@ -6,6 +6,7 @@ import eu.pb4.sgui.api.GuiHelpers;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.AnvilInputGui;
 import net.minecraft.item.Items;
+import net.minecraft.server.PlayerConfigEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -18,15 +19,15 @@ import static draylar.goml.ui.PagedGui.playClickSound;
 
 public class NamePlayerSelectorGui extends AnvilInputGui {
     private final Runnable regularClose;
-    private final Consumer<GameProfile> playerConsumer;
-    private final Predicate<GameProfile> shouldDisplay;
+    private final Consumer<PlayerConfigEntry> playerConsumer;
+    private final Predicate<PlayerConfigEntry> shouldDisplay;
     private boolean ignore = false;
-    private GameProfile selectedPlayer;
+    private PlayerConfigEntry selectedPlayer;
     private int tick;
     private String currentName;
     private int timer;
 
-    public NamePlayerSelectorGui(ServerPlayerEntity player, Predicate<GameProfile> shouldDisplay, Runnable regularClose, Consumer<GameProfile> playerConsumer) {
+    public NamePlayerSelectorGui(ServerPlayerEntity player, Predicate<PlayerConfigEntry> shouldDisplay, Runnable regularClose, Consumer<PlayerConfigEntry> playerConsumer) {
         super(player, false);
         this.regularClose = regularClose;
         this.playerConsumer = playerConsumer;
@@ -56,8 +57,8 @@ public class NamePlayerSelectorGui extends AnvilInputGui {
 
         if (this.timer-- == 0 && this.currentName != null) {
             this.updateIcon();
-            this.player.getServer().getUserCache().findByNameAsync(this.currentName).thenAccept((profile) -> {
-                this.player.getServer().execute(() -> {
+            CompletableFuture.supplyAsync(() -> this.player.getEntityWorld().getServer().getApiServices().nameToIdCache().findByName(this.currentName)).thenAccept((profile) -> {
+                this.player.getEntityWorld().getServer().execute(() -> {
                     if (profile.isPresent()) {
                         this.selectedPlayer = profile.get();
                         if (this.shouldDisplay.test(profile.get())) {
@@ -102,12 +103,12 @@ public class NamePlayerSelectorGui extends AnvilInputGui {
 
     private void updateIcon() {
         var b = new GuiElementBuilder(Items.PLAYER_HEAD)
-                .setName(Text.translatable("text.goml.gui.player_selector.input.select_player", this.selectedPlayer != null ? this.selectedPlayer.getName() : this.currentName).formatted(Formatting.WHITE));
+                .setName(Text.translatable("text.goml.gui.player_selector.input.select_player", this.selectedPlayer != null ? this.selectedPlayer.name() : this.currentName).formatted(Formatting.WHITE));
 
         if (this.selectedPlayer != null) {
-            b.setSkullOwner(this.selectedPlayer, null);
+            b.setProfile(this.selectedPlayer.id());
         } else {
-            b.setSkullOwner(GOMLTextures.GUI_QUESTION_MARK);
+            b.setProfileSkinTexture(GOMLTextures.GUI_QUESTION_MARK);
         }
 
         this.setSlot(1, b

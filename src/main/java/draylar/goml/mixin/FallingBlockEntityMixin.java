@@ -27,11 +27,11 @@ public abstract class FallingBlockEntityMixin extends Entity implements OriginOw
 
     @ModifyExpressionValue(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/block/BlockState;canPlaceAt(Lnet/minecraft/world/WorldView;Lnet/minecraft/util/math/BlockPos;)Z"))
     private boolean cantPlaceOnClaim(boolean bool, @Local(ordinal = 0) BlockPos pos) {
-        if (this.getWorld().isClient) {
+        if (this.getEntityWorld().isClient()) {
             return bool;
         }
         if (bool) {
-            return ClaimUtils.hasMatchingClaims(this.getWorld(), pos, this.goml$getOriginSafe());
+            return ClaimUtils.hasMatchingClaims(this.getEntityWorld(), pos, this.goml$getOriginSafe());
         }
 
         return false;
@@ -39,10 +39,10 @@ public abstract class FallingBlockEntityMixin extends Entity implements OriginOw
 
     @Inject(method = "handleFallDamage", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;ceil(D)I", ordinal = 0), cancellable = true)
     private void blockFallDamage(double fallDistance, float damagePerDistance, DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
-        if (this.getWorld().isClient) {
+        if (this.getEntityWorld().isClient()) {
             return;
         }
-        if (!ClaimUtils.hasMatchingClaims(this.getWorld(), this.getBlockPos(), this.goml$getOriginSafe())) {
+        if (!ClaimUtils.hasMatchingClaims(this.getEntityWorld(), this.getBlockPos(), this.goml$getOriginSafe())) {
             cir.setReturnValue(false);
         }
     }

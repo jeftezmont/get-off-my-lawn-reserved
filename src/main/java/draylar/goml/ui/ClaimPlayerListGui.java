@@ -6,6 +6,7 @@ import draylar.goml.api.group.PlayerGroup;
 import draylar.goml.registry.GOMLTextures;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import net.minecraft.item.Items;
+import net.minecraft.server.PlayerConfigEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
@@ -94,9 +95,9 @@ public class ClaimPlayerListGui extends GenericPlayerListGui {
                         new GenericPlayerAndGroupSelectionGui(
                                 this.player,
                                 Text.translatable("text.goml.gui.player_add_gui.title"),
-                                (p) -> !this.claim.hasDirectPermission(p.getId()),
+                                (p) -> !this.claim.hasDirectPermission(p.id()),
                                 (p) -> !this.claim.getGroups().contains(p),
-                                (p) -> this.claim.trust(p.getId()),
+                                (p) -> this.claim.trust(p.id()),
                                 this.claim::trust,
                                 this::refreshOpen).updateAndOpen();
                     }))
@@ -106,13 +107,13 @@ public class ClaimPlayerListGui extends GenericPlayerListGui {
     }
 
     @Override
-    protected void modifyBuilder(GuiElementBuilder builder, Optional<GameProfile> optional, UUID uuid) {
+    protected void modifyBuilder(GuiElementBuilder builder, Optional<PlayerConfigEntry> optional, UUID uuid) {
         var exist = optional.isPresent();
         var gameProfile = exist ? optional.get() : null;
         var isOwner = this.claim.isOwner(uuid);
         var canRemove = isOwner ? this.canModifyOwners : this.canModifyTrusted;
 
-        builder.setName(Text.literal(exist ? gameProfile.getName() : uuid.toString())
+        builder.setName(Text.literal(exist ? gameProfile.name() : uuid.toString())
                 .formatted(isOwner ? Formatting.GOLD : Formatting.WHITE).append(isOwner
                         ? Text.literal(" (").formatted(Formatting.DARK_GRAY)
                         .append(Text.translatable("text.goml.owner").formatted(Formatting.WHITE))

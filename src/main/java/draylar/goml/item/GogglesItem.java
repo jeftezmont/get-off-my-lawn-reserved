@@ -36,7 +36,7 @@ public class GogglesItem extends Item implements PolymerItem {
     public void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, @Nullable EquipmentSlot slot) {
         if (entity instanceof ServerPlayerEntity player && slot != null) {
             if (player.age % 70 == 0) {
-                var distance = player.getServer().getPlayerManager().getViewDistance() * 16;
+                var distance = player.getEntityWorld().getServer().getPlayerManager().getViewDistance() * 16;
 
                 ClaimUtils.getClaimsInBox(
                         world,

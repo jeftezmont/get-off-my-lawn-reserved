@@ -13,6 +13,7 @@ import net.minecraft.scoreboard.Team;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.NameToIdCache;
 import net.minecraft.util.UserCache;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,19 +40,19 @@ public class VanillaTeamGroups {
         public @Nullable PlayerGroup getGroupOf(PlayerEntity player) {
             var team = player.getScoreboardTeam();
             if (team != null) {
-                return TeamGroup.of(player.getServer().getUserCache(), team);
+                return TeamGroup.of(player.getEntityWorld().getServer().getApiServices().nameToIdCache(), team);
             }
             return null;
         }
 
         @Override
         public @Nullable PlayerGroup getGroupOf(MinecraftServer server, UUID uuid) {
-            var profile = server.getUserCache().getByUuid(uuid);
+            var profile = server.getApiServices().nameToIdCache().getByUuid(uuid);
 
             if (profile.isPresent()) {
-                var team = server.getScoreboard().getTeam(profile.get().getName());
+                var team = server.getScoreboard().getTeam(profile.get().name());
                 if (team  != null) {
-                    return TeamGroup.of(server.getUserCache(), team);
+                    return TeamGroup.of(server.getApiServices().nameToIdCache(), team);
                 }
             }
             return null;
@@ -62,7 +63,7 @@ public class VanillaTeamGroups {
         public PlayerGroup fromKey(MinecraftServer server, PlayerGroup.Key key) {
             var team = server.getScoreboard().getTeam(key.groupId());
             if (team  != null) {
-                return TeamGroup.of(server.getUserCache(), team);
+                return TeamGroup.of(server.getApiServices().nameToIdCache(), team);
             }
             return null;
         }
@@ -73,13 +74,13 @@ public class VanillaTeamGroups {
         }
     }
 
-    private record TeamGroup(UserCache cache, Team team, HashSet<Claim> claims) implements PlayerGroup {
+    private record TeamGroup(NameToIdCache cache, Team team, HashSet<Claim> claims) implements PlayerGroup {
         public static final WeakHashMap<Team, TeamGroup> CACHE = new WeakHashMap<>();
-        private TeamGroup(UserCache cache, Team guild) {
+        private TeamGroup(NameToIdCache cache, Team guild) {
             this(cache, guild, new HashSet<>());
         }
 
-        public static PlayerGroup of(UserCache cache, Team team) {
+        public static PlayerGroup of(NameToIdCache cache, Team team) {
             var g = CACHE.get(team);
 
             if (g == null) {
@@ -122,7 +123,7 @@ public class VanillaTeamGroups {
         @Override
         public boolean isPartOf(UUID uuid) {
             var profile = this.cache.getByUuid(uuid);
-            return profile.isPresent() && this.team.getPlayerList().contains(profile.get().getName());
+            return profile.isPresent() && this.team.getPlayerList().contains(profile.get().name());
         }
 
         @Override

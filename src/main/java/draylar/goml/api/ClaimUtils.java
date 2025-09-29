@@ -222,7 +222,7 @@ public class ClaimUtils {
         return canDamageEntity(world, entity, source.getAttacker(), source.getSource());
     }
     public static boolean canDamageEntity(World world, Entity entity, @Nullable Entity attacker, @Nullable Entity source) {
-        if (world.isClient) {
+        if (world.isClient()) {
             return true;
         }
 
@@ -294,7 +294,7 @@ public class ClaimUtils {
     }
 
     public static boolean canModify(World world, BlockPos pos, @Nullable PlayerEntity player) {
-        if (GetOffMyLawn.CONFIG.allowFakePlayersToModify && player != null && player.getClass() != ServerPlayerEntity.class && !world.isClient) {
+        if (GetOffMyLawn.CONFIG.allowFakePlayersToModify && player != null && player.getClass() != ServerPlayerEntity.class && !world.isClient()) {
             return true;
         }
 
@@ -366,9 +366,9 @@ public class ClaimUtils {
         var builder = new StringBuilder();
         var iterator = uuids.iterator();
         while (iterator.hasNext()) {
-            var gameProfile = server.getUserCache().getByUuid(iterator.next());
+            var gameProfile = server.getApiServices().nameToIdCache().getByUuid(iterator.next());
             if (gameProfile.isPresent()) {
-                builder.append(gameProfile.get().getName());
+                builder.append(gameProfile.get().name());
 
                 if (iterator.hasNext()) {
                     builder.append(", ");
@@ -525,8 +525,8 @@ public class ClaimUtils {
 
     public static void drawClaimInWorld(ServerPlayerEntity player, Claim claim) {
         var box = claim.getClaimBox().toBox();
-        var minPos = new BlockPos(box.x1(), Math.max(box.y1(), player.getWorld().getBottomY()), box.z1());
-        var maxPos = new BlockPos(box.x2() - 1, Math.min(box.y2() - 1, player.getWorld().getTopYInclusive()), box.z2() - 1);
+        var minPos = new BlockPos(box.x1(), Math.max(box.y1(), player.getEntityWorld().getBottomY()), box.z1());
+        var maxPos = new BlockPos(box.x2() - 1, Math.min(box.y2() - 1, player.getEntityWorld().getTopYInclusive()), box.z2() - 1);
 
         BlockState state = ClaimUtils.gogglesClaimColor(claim);
 

@@ -24,7 +24,7 @@ public abstract class BotaniaEntityManaBurstMixin extends ThrownEntity {
 
     @Inject(method = "onBlockHit", at = @At("HEAD"), cancellable = true)
     private void goml_protectClaims(BlockHitResult receiver, CallbackInfo ci) {
-        if (this.getOwner() instanceof PlayerEntity player && !ClaimUtils.canModify(this.getWorld(), receiver.getBlockPos(), player)) {
+        if (this.getOwner() instanceof PlayerEntity player && !ClaimUtils.canModify(this.getEntityWorld(), receiver.getBlockPos(), player)) {
             this.discard();
             ci.cancel();
         }
@@ -32,7 +32,7 @@ public abstract class BotaniaEntityManaBurstMixin extends ThrownEntity {
 
     @Inject(method = "onEntityHit", at = @At("HEAD"), cancellable = true)
     private void goml_protectEntities(EntityHitResult hit, CallbackInfo ci) {
-        if (this.getOwner() instanceof PlayerEntity player && !ClaimUtils.canModify(this.getWorld(), BlockPos.ofFloored(hit.getPos()), player)) {
+        if (this.getOwner() instanceof PlayerEntity player && !ClaimUtils.canModify(this.getEntityWorld(), BlockPos.ofFloored(hit.getPos()), player)) {
             this.discard();
             ci.cancel();
         }

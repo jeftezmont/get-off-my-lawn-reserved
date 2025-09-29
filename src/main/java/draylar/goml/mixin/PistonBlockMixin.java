@@ -16,7 +16,7 @@ public abstract class PistonBlockMixin {
 
     @Inject(at = @At("HEAD"), method = "isMovable", cancellable = true)
     private static void goml_isMoveable(BlockState state, World world, BlockPos pos, Direction motionDir, boolean canBreak, Direction pistonDir, CallbackInfoReturnable<Boolean> cir) {
-        if (world.isClient) {
+        if (world.isClient()) {
             return;
         }
 

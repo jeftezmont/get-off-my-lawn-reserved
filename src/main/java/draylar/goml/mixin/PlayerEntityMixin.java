@@ -20,7 +20,7 @@ public abstract class PlayerEntityMixin extends LivingEntity {
 
     @ModifyExpressionValue(method = "attack", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getNonSpectatingEntities(Ljava/lang/Class;Lnet/minecraft/util/math/Box;)Ljava/util/List;"))
     private List<Entity> filterEntities(List<Entity> original) {
-        original.removeIf(x -> !ClaimUtils.canDamageEntity(this.getWorld(), x, this, null));
+        original.removeIf(x -> !ClaimUtils.canDamageEntity(this.getEntityWorld(), x, this, null));
         return original;
     }
 }

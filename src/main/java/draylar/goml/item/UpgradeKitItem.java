@@ -51,7 +51,7 @@ public class UpgradeKitItem extends Item implements PolymerItem {
 
     @Override
     public ActionResult useOnBlock(ItemUsageContext context) {
-        if(context == null || context.getPlayer() == null || context.getWorld().isClient) {
+        if(context == null || context.getPlayer() == null || context.getWorld().isClient()) {
             return ActionResult.PASS;
         }
 
