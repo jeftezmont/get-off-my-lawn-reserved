@@ -35,6 +35,8 @@ import net.minecraft.world.chunk.WorldChunk;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 public class GetOffMyLawn implements ModInitializer, WorldComponentInitializer {
@@ -51,6 +53,8 @@ public class GetOffMyLawn implements ModInitializer, WorldComponentInitializer {
             .build();
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
     public static GOMLConfig CONFIG = new GOMLConfig();
+
+    public static List<Runnable> NEXT_TICK_TASK = new ArrayList<>();
 
     public static Identifier id(String name) {
         return Identifier.of(MOD_ID, name);
@@ -76,6 +80,13 @@ public class GetOffMyLawn implements ModInitializer, WorldComponentInitializer {
         });
 
         ServerTickEvents.END_WORLD_TICK.register((world) -> CLAIM.get(world).getClaims().values().forEach(x -> x.tick(world)));
+        ServerTickEvents.START_SERVER_TICK.register(server -> {
+            for (var task : NEXT_TICK_TASK) {
+                task.run();
+            }
+            NEXT_TICK_TASK.clear();
+        });
+        ServerLifecycleEvents.SERVER_STOPPED.register(x -> NEXT_TICK_TASK.clear());
 
         VanillaTeamGroups.init();
         if (FabricLoader.getInstance().isModLoaded("argonauts")) {
