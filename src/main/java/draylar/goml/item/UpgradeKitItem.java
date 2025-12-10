@@ -11,29 +11,26 @@ import draylar.goml.api.event.ClaimEvents;
 import draylar.goml.block.ClaimAnchorBlock;
 import draylar.goml.block.entity.ClaimAnchorBlockEntity;
 import eu.pb4.polymer.core.api.item.PolymerItem;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.type.TooltipDisplayComponent;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class UpgradeKitItem extends Item implements PolymerItem {
 
@@ -41,7 +38,7 @@ public class UpgradeKitItem extends Item implements PolymerItem {
     private final ClaimAnchorBlock to;
     private final Item clientItem;
 
-    public UpgradeKitItem(Settings settings, ClaimAnchorBlock from, ClaimAnchorBlock to, Item display) {
+    public UpgradeKitItem(Properties settings, ClaimAnchorBlock from, ClaimAnchorBlock to, Item display) {
         super(settings);
         this.clientItem = display;
 
@@ -50,13 +47,13 @@ public class UpgradeKitItem extends Item implements PolymerItem {
     }
 
     @Override
-    public ActionResult useOnBlock(ItemUsageContext context) {
-        if(context == null || context.getPlayer() == null || context.getWorld().isClient()) {
-            return ActionResult.PASS;
+    public InteractionResult useOn(UseOnContext context) {
+        if(context == null || context.getPlayer() == null || context.getLevel().isClientSide()) {
+            return InteractionResult.PASS;
         }
 
-        BlockPos pos = context.getBlockPos();
-        World world = context.getWorld();
+        BlockPos pos = context.getClickedPos();
+        Level world = context.getLevel();
         BlockState block = world.getBlockState(pos);
 
         if(block.getBlock().equals(from)) {
@@ -66,12 +63,12 @@ public class UpgradeKitItem extends Item implements PolymerItem {
             );
 
             if(!claimsFound.isEmpty()) {
-                boolean noPermission = claimsFound.anyMatch((Entry<ClaimBox, Claim> boxInfo) -> !boxInfo.getValue().getOwners().contains(context.getPlayer().getUuid()));
+                boolean noPermission = claimsFound.anyMatch((Entry<ClaimBox, Claim> boxInfo) -> !boxInfo.getValue().getOwners().contains(context.getPlayer().getUUID()));
 
                 // get claim at location
                 AtomicReference<Entry<ClaimBox, Claim>> currentClaim = new AtomicReference<>();
                 claimsFound.forEach(claim -> {
-                    if (claim.getValue().getOrigin().equals(pos) && claim.getValue().getOwners().contains(context.getPlayer().getUuid())) {
+                    if (claim.getValue().getOrigin().equals(pos) && claim.getValue().getOwners().contains(context.getPlayer().getUUID())) {
                         currentClaim.set(claim);
                     }
                 });
@@ -93,15 +90,15 @@ public class UpgradeKitItem extends Item implements PolymerItem {
 
                         // set block
                         BlockEntity oldBE = world.getBlockEntity(pos);
-                        world.setBlockState(pos, to.getDefaultState());
+                        world.setBlockAndUpdate(pos, to.defaultBlockState());
 
                         if (this.to.asItem() != null) {
-                            claimInfo.internal_setIcon(this.to.asItem().getDefaultStack());
+                            claimInfo.internal_setIcon(this.to.asItem().getDefaultInstance());
                         }
                         claimInfo.internal_setType(this.to);
 
                         claimInfo.internal_setClaimBox(newBox);
-                        if (world instanceof ServerWorld world1) {
+                        if (world instanceof ServerLevel world1) {
                             claimInfo.internal_updateChunkCount(world1);
                         }
                         claimInfo.internal_setWorld(currentClaim.get().getValue().getWorld());
@@ -109,7 +106,7 @@ public class UpgradeKitItem extends Item implements PolymerItem {
 
                         // decrement stack
                         if(!context.getPlayer().isCreative() && !context.getPlayer().isSpectator()) {
-                            context.getStack().decrement(1);
+                            context.getItemInHand().shrink(1);
                         }
 
                         // transfer BE data
@@ -119,38 +116,38 @@ public class UpgradeKitItem extends Item implements PolymerItem {
                         }
 
                         ClaimEvents.CLAIM_RESIZED.invoker().onResizeEvent(claimInfo, oldSize, newBox);
-                        return ActionResult.SUCCESS;
+                        return InteractionResult.SUCCESS;
                     } else {
-                        var list = Text.literal("");
+                        var list = Component.literal("");
 
                         claims.forEach((c) -> {
                             var box = c.getKey().toBox();
 
-                            list.append(Text.literal("[").formatted(Formatting.GRAY)
-                                    .append(Text.literal(box.x1() + ", " + box.y1() + ", " + box.z1()).formatted(Formatting.WHITE))
+                            list.append(Component.literal("[").withStyle(ChatFormatting.GRAY)
+                                    .append(Component.literal(box.x1() + ", " + box.y1() + ", " + box.z1()).withStyle(ChatFormatting.WHITE))
                                     .append(" | ")
-                                    .append(Text.literal(box.x2() + ", " + box.y2() + ", " + box.z2()).formatted(Formatting.WHITE))
+                                    .append(Component.literal(box.x2() + ", " + box.y2() + ", " + box.z2()).withStyle(ChatFormatting.WHITE))
                                     .append("] ")
                             );
                         });
 
-                        context.getPlayer().sendMessage(GetOffMyLawn.CONFIG.prefix(Text.translatable("text.goml.cant_upgrade_claim.collides_with", list).formatted(Formatting.RED)), false);
+                        context.getPlayer().displayClientMessage(GetOffMyLawn.CONFIG.prefix(Component.translatable("text.goml.cant_upgrade_claim.collides_with", list).withStyle(ChatFormatting.RED)), false);
                     }
                 }
             }
         }
 
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, TooltipContext context, TooltipDisplayComponent displayComponent, Consumer<Text> textConsumer, TooltipType type) {
-        super.appendTooltip(stack, context, displayComponent, textConsumer, type);
-        textConsumer.accept(Text.translatable(from.getTranslationKey()).append(" -> ").append(Text.translatable(to.getTranslationKey())).formatted(Formatting.GRAY));
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type) {
+        super.appendHoverText(stack, context, displayComponent, textConsumer, type);
+        textConsumer.accept(Component.translatable(from.getDescriptionId()).append(" -> ").append(Component.translatable(to.getDescriptionId())).withStyle(ChatFormatting.GRAY));
     }
 
     @Override
-    public boolean hasGlint(ItemStack stack) {
+    public boolean isFoil(ItemStack stack) {
         return true;
     }
 

@@ -1,6 +1,6 @@
 package draylar.goml.other;
 
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 public interface OriginOwner {
@@ -14,7 +14,7 @@ public interface OriginOwner {
             goml$tryFilling();
             origin = this.goml$getOrigin();
             if (origin == null) {
-                return BlockPos.ORIGIN;
+                return BlockPos.ZERO;
             }
         }
         return origin;

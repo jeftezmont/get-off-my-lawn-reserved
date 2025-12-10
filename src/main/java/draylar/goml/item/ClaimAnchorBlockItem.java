@@ -5,11 +5,10 @@ import draylar.goml.api.ClaimUtils;
 import draylar.goml.block.ClaimAnchorBlock;
 import draylar.goml.registry.GOMLBlocks;
 import me.lucko.fabric.api.permissions.v0.Options;
-import net.minecraft.block.BlockState;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.state.BlockState;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -17,30 +16,30 @@ public class ClaimAnchorBlockItem extends TooltippedBlockItem {
 
     private final ClaimAnchorBlock claimBlock;
 
-    public ClaimAnchorBlockItem(ClaimAnchorBlock block, Settings settings, int lines) {
+    public ClaimAnchorBlockItem(ClaimAnchorBlock block, Properties settings, int lines) {
         super(block, settings, lines);
         this.claimBlock = block;
     }
 
     @Override
-    public void addLines(Consumer<Text> textConsumer) {
+    public void addLines(Consumer<Component> textConsumer) {
         super.addLines(textConsumer);
-        textConsumer.accept(Text.translatable("text.goml.radius",
-                Text.literal("" + this.claimBlock.getRadius()).formatted(Formatting.WHITE)
-        ).formatted(Formatting.YELLOW));
+        textConsumer.accept(Component.translatable("text.goml.radius",
+                Component.literal("" + this.claimBlock.getRadius()).withStyle(ChatFormatting.WHITE)
+        ).withStyle(ChatFormatting.YELLOW));
     }
 
     @Override
-    protected boolean canPlace(ItemPlacementContext context, BlockState state) {
-        if (context.getWorld().isClient()) {
+    protected boolean canPlace(BlockPlaceContext context, BlockState state) {
+        if (context.getLevel().isClientSide()) {
             return true;
         }
 
-        var pos = context.getBlockPos();
+        var pos = context.getClickedPos();
         var radius = this.claimBlock.getRadius();
 
         if (radius <= 0 && !ClaimUtils.isInAdminMode(context.getPlayer())) {
-            context.getPlayer().sendMessage(GetOffMyLawn.CONFIG.prefix(Text.translatable("text.goml.cant_place_claim.admin_only").formatted(Formatting.RED)), false);
+            context.getPlayer().displayClientMessage(GetOffMyLawn.CONFIG.prefix(Component.translatable("text.goml.cant_place_claim.admin_only").withStyle(ChatFormatting.RED)), false);
             return false;
         }
 
@@ -48,11 +47,11 @@ public class ClaimAnchorBlockItem extends TooltippedBlockItem {
         var checkBox = ClaimUtils.createClaimBox(pos, radius);
 
         if (!ClaimUtils.isInAdminMode(context.getPlayer())) {
-            var count = ClaimUtils.getClaimsOwnedBy(context.getWorld(), Objects.requireNonNull(context.getPlayer()).getUuid()).filter(x -> x.getValue().getType() != GOMLBlocks.ADMIN_CLAIM_ANCHOR.getFirst()).count();
+            var count = ClaimUtils.getClaimsOwnedBy(context.getLevel(), Objects.requireNonNull(context.getPlayer()).getUUID()).filter(x -> x.getValue().getType() != GOMLBlocks.ADMIN_CLAIM_ANCHOR.getFirst()).count();
 
             int maxCount;
             var allowedCount = Options.get(context.getPlayer(), "goml.claim_limit");
-            var allowedCount2 = Options.get(context.getPlayer(), "goml.claim_limit." + context.getWorld().getRegistryKey().getValue().toString());
+            var allowedCount2 = Options.get(context.getPlayer(), "goml.claim_limit." + context.getLevel().dimension().identifier().toString());
 
             if (allowedCount2.isPresent()) {
                 try {
@@ -73,37 +72,37 @@ public class ClaimAnchorBlockItem extends TooltippedBlockItem {
             if (maxCount != -1
                     && count >= maxCount
             ) {
-                context.getPlayer().sendMessage(GetOffMyLawn.CONFIG.prefix(Text.translatable("text.goml.cant_place_claim.max_count_reached", count, GetOffMyLawn.CONFIG.maxClaimsPerPlayer).formatted(Formatting.RED)), false);
+                context.getPlayer().displayClientMessage(GetOffMyLawn.CONFIG.prefix(Component.translatable("text.goml.cant_place_claim.max_count_reached", count, GetOffMyLawn.CONFIG.maxClaimsPerPlayer).withStyle(ChatFormatting.RED)), false);
                 return false;
             }
 
-            if (GetOffMyLawn.CONFIG.isBlacklisted(context.getWorld(), checkBox.toBox())) {
-                context.getPlayer().sendMessage(GetOffMyLawn.CONFIG.prefix(Text.translatable("text.goml.cant_place_claim.blacklisted_area", context.getWorld().getRegistryKey().getValue().toString(), context.getBlockPos().toShortString()).formatted(Formatting.RED)), false);
+            if (GetOffMyLawn.CONFIG.isBlacklisted(context.getLevel(), checkBox.toBox())) {
+                context.getPlayer().displayClientMessage(GetOffMyLawn.CONFIG.prefix(Component.translatable("text.goml.cant_place_claim.blacklisted_area", context.getLevel().dimension().identifier().toString(), context.getClickedPos().toShortString()).withStyle(ChatFormatting.RED)), false);
                 return false;
             }
         }
 
 
-        var claims = ClaimUtils.getClaimsInBox(context.getWorld(), checkBox.rtree3iBox());
+        var claims = ClaimUtils.getClaimsInBox(context.getLevel(), checkBox.rtree3iBox());
         if (GetOffMyLawn.CONFIG.allowClaimOverlappingIfSameOwner) {
             claims = claims.filter(x -> !x.getValue().isOwner(context.getPlayer()) || x.getKey().toBox().equals(checkBox.toBox()));
         }
 
         if (claims.isNotEmpty()) {
-            var list = Text.literal("");
+            var list = Component.literal("");
 
             claims.forEach((c) -> {
                 var box = c.getKey().toBox();
 
-                list.append(Text.literal("[").formatted(Formatting.GRAY)
-                        .append(Text.literal(box.x1() + ", " + box.y1() + ", " + box.z1()).formatted(Formatting.WHITE))
+                list.append(Component.literal("[").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(box.x1() + ", " + box.y1() + ", " + box.z1()).withStyle(ChatFormatting.WHITE))
                         .append(" | ")
-                        .append(Text.literal(box.x2() + ", " + box.y2() + ", " + box.z2()).formatted(Formatting.WHITE))
+                        .append(Component.literal(box.x2() + ", " + box.y2() + ", " + box.z2()).withStyle(ChatFormatting.WHITE))
                         .append("] ")
                 );
             });
 
-            context.getPlayer().sendMessage(GetOffMyLawn.CONFIG.prefix(Text.translatable("text.goml.cant_place_claim.collides_with", list).formatted(Formatting.RED)), false);
+            context.getPlayer().displayClientMessage(GetOffMyLawn.CONFIG.prefix(Component.translatable("text.goml.cant_place_claim.collides_with", list).withStyle(ChatFormatting.RED)), false);
             return false;
         }
 

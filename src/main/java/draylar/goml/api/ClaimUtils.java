@@ -13,29 +13,35 @@ import draylar.goml.other.OriginOwner;
 import draylar.goml.other.StatusEnum;
 import draylar.goml.registry.GOMLBlocks;
 import me.lucko.fabric.api.permissions.v0.Permissions;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.AreaEffectCloudEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.particle.BlockStateParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.Registries;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.SectionPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.objects.PlayerSprite;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Pair;
-import net.minecraft.util.math.*;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.util.Tuple;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.AreaEffectCloud;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.item.component.ResolvableProfile;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,7 +57,7 @@ public class ClaimUtils {
      * @param pos   position to check at
      * @return claims at the given position in the given world
      */
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsAt(WorldView world, BlockPos pos) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsAt(LevelReader world, BlockPos pos) {
         Box checkBox = Box.create(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1);
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries(box -> box.contains(checkBox));
     }
@@ -63,7 +69,7 @@ public class ClaimUtils {
      * @param pos   position to check at
      * @return claims at the given position in the given world
      */
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsWithOrigin(WorldView world, BlockPos pos) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsWithOrigin(LevelReader world, BlockPos pos) {
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries().filter(x -> x.getValue().getOrigin().equals(pos));
     }
 
@@ -76,7 +82,7 @@ public class ClaimUtils {
      * @param player player's uuid to find by
      * @return claims at the given position in the given world
      */
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsOwnedBy(WorldView world, UUID player) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsOwnedBy(LevelReader world, UUID player) {
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries().filter(entry -> entry.getValue().isOwner(player));
     }
 
@@ -89,7 +95,7 @@ public class ClaimUtils {
      * @param player player's uuid to find by
      * @return claims at the given position in the given world
      */
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsTrusted(WorldView world, UUID player) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsTrusted(LevelReader world, UUID player) {
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries().filter(entry -> entry.getValue().getTrusted().contains(player));
     }
 
@@ -102,7 +108,7 @@ public class ClaimUtils {
      * @param player player's uuid to find by
      * @return claims at the given position in the given world
      */
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsWithAccess(WorldView world, UUID player) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsWithAccess(LevelReader world, UUID player) {
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries().filter(entry -> entry.getValue().hasPermission(player));
     }
 
@@ -114,20 +120,20 @@ public class ClaimUtils {
      * @param upper upper corner of claim
      * @return claims that intersect with a box created by the 2 positions in the given world
      */
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsInBox(WorldView world, BlockPos lower, BlockPos upper) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsInBox(LevelReader world, BlockPos lower, BlockPos upper) {
         Box checkBox = createBox(lower, upper);
         return getClaimsInBox(world, checkBox);
     }
 
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsInBox(WorldView world, Box checkBox) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsInBox(LevelReader world, Box checkBox) {
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries(box -> box.intersectsClosed(checkBox));
     }
 
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsInOpenBox(WorldView world, Box checkBox) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsInOpenBox(LevelReader world, Box checkBox) {
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries(box -> box.intersectsOpen(checkBox));
     }
 
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsInDimension(WorldView world) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsInDimension(LevelReader world) {
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries(a -> true);
     }
 
@@ -149,55 +155,55 @@ public class ClaimUtils {
      * @param ignore box to ignore
      * @return claims that intersect with a box created by the 2 positions in the given world
      */
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsInBox(WorldView world, BlockPos lower, BlockPos upper, Box ignore) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsInBox(LevelReader world, BlockPos lower, BlockPos upper, Box ignore) {
         Box checkBox = Box.create(lower.getX(), lower.getY(), lower.getZ(), upper.getX(), upper.getY(), upper.getZ());
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries(box -> box.intersectsClosed(checkBox) && !box.equals(ignore));
     }
 
-    public static Selection<Entry<ClaimBox, Claim>> getClaimsInBox(WorldView world, Box checkBox, Box ignore) {
+    public static Selection<Entry<ClaimBox, Claim>> getClaimsInBox(LevelReader world, Box checkBox, Box ignore) {
         return GetOffMyLawn.CLAIM.get(world).getClaims().entries(box -> box.intersectsClosed(checkBox) && !box.equals(ignore));
     }
 
     /**
-     * Returns whether or not the information about a claim matches with a {@link PlayerEntity} and {@link BlockPos}.
+     * Returns whether or not the information about a claim matches with a {@link Player} and {@link BlockPos}.
      *
      * @param claim       claim to check
      * @param checkPlayer player to check against
      * @param checkPos    position to check against
      * @return whether or not the claim information matches up with the player and position
      */
-    public static boolean canDestroyClaimBlock(Entry<ClaimBox, Claim> claim, @Nullable PlayerEntity checkPlayer, BlockPos checkPos) {
+    public static boolean canDestroyClaimBlock(Entry<ClaimBox, Claim> claim, @Nullable Player checkPlayer, BlockPos checkPos) {
         return (checkPlayer == null || playerHasPermission(claim, checkPlayer)) && claim.getValue().getOrigin().equals(checkPos);
     }
 
-    public static boolean canModifyClaimAt(World world, BlockPos pos, Entry<ClaimBox, Claim> claim, PlayerEntity player) {
+    public static boolean canModifyClaimAt(Level world, BlockPos pos, Entry<ClaimBox, Claim> claim, Player player) {
         return claim.getValue().hasPermission(player)
                 || isInAdminMode(player)
-                || ClaimEvents.PERMISSION_DENIED.invoker().check(player, world, Hand.MAIN_HAND, pos, PermissionReason.AREA_PROTECTED) == ActionResult.SUCCESS;
+                || ClaimEvents.PERMISSION_DENIED.invoker().check(player, world, InteractionHand.MAIN_HAND, pos, PermissionReason.AREA_PROTECTED) == InteractionResult.SUCCESS;
     }
 
-    public static boolean isInAdminMode(PlayerEntity player) {
+    public static boolean isInAdminMode(Player player) {
         return Permissions.check(player, "goml.modify_others", 3) && (player instanceof GomlPlayer adminModePlayer && adminModePlayer.goml_getAdminMode());
     }
 
-    public static boolean canFireDestroy(World world, BlockPos pos) {
+    public static boolean canFireDestroy(Level world, BlockPos pos) {
         return ClaimUtils.getClaimsAt(world, pos).isEmpty();
     }
 
-    public static boolean canFluidFlow(World world, BlockPos cur, BlockPos dest) {
+    public static boolean canFluidFlow(Level world, BlockPos cur, BlockPos dest) {
         var claimsDest = ClaimUtils.getClaimsAt(world, dest);
         var claimsCur = ClaimUtils.getClaimsAt(world, cur);
         return claimsDest.isEmpty() || claimsCur.anyMatch(x -> claimsCur.anyMatch(y -> x.equals(y)));
     }
 
-    public static boolean canExplosionDestroy(World world, BlockPos pos, @Nullable Entity causingEntity) {
+    public static boolean canExplosionDestroy(Level world, BlockPos pos, @Nullable Entity causingEntity) {
         Selection<Entry<ClaimBox, Claim>> claimsFound = ClaimUtils.getClaimsAt(world, pos);
 
-        PlayerEntity player;
+        Player player;
 
-        if (causingEntity instanceof PlayerEntity playerEntity) {
+        if (causingEntity instanceof Player playerEntity) {
             player = playerEntity;
-        } else if (!GetOffMyLawn.CONFIG.protectAgainstHostileExplosionsActivatedByTrustedPlayers && causingEntity instanceof MobEntity creeperEntity && creeperEntity.getTarget() instanceof PlayerEntity playerEntity) {
+        } else if (!GetOffMyLawn.CONFIG.protectAgainstHostileExplosionsActivatedByTrustedPlayers && causingEntity instanceof Mob creeperEntity && creeperEntity.getTarget() instanceof Player playerEntity) {
             player = playerEntity;
         } else {
             player = null;
@@ -218,11 +224,11 @@ public class ClaimUtils {
         });
     }
 
-    public static boolean canDamageEntity(World world, Entity entity, DamageSource source) {
-        return canDamageEntity(world, entity, source.getAttacker(), source.getSource());
+    public static boolean canDamageEntity(Level world, Entity entity, DamageSource source) {
+        return canDamageEntity(world, entity, source.getEntity(), source.getDirectEntity());
     }
-    public static boolean canDamageEntity(World world, Entity entity, @Nullable Entity attacker, @Nullable Entity source) {
-        if (world.isClient()) {
+    public static boolean canDamageEntity(Level world, Entity entity, @Nullable Entity attacker, @Nullable Entity source) {
+        if (world.isClientSide()) {
             return true;
         }
 
@@ -230,20 +236,20 @@ public class ClaimUtils {
             return true;
         }
 
-        PlayerEntity player;
+        Player player;
 
-         if (attacker instanceof PlayerEntity playerEntity) {
+         if (attacker instanceof Player playerEntity) {
             player = playerEntity;
-        } else if (!GetOffMyLawn.CONFIG.protectAgainstHostileExplosionsActivatedByTrustedPlayers && attacker instanceof MobEntity creeperEntity && creeperEntity.getTarget() instanceof PlayerEntity playerEntity) {
+        } else if (!GetOffMyLawn.CONFIG.protectAgainstHostileExplosionsActivatedByTrustedPlayers && attacker instanceof Mob creeperEntity && creeperEntity.getTarget() instanceof Player playerEntity) {
             player = playerEntity;
-        } else if (attacker instanceof ProjectileEntity projectileEntity && projectileEntity.getOwner() instanceof PlayerEntity playerEntity) {
+        } else if (attacker instanceof Projectile projectileEntity && projectileEntity.getOwner() instanceof Player playerEntity) {
             player = playerEntity;
-        } else if (attacker instanceof AreaEffectCloudEntity areaEffectCloudEntity && areaEffectCloudEntity.getOwner() instanceof PlayerEntity playerEntity) {
+        } else if (attacker instanceof AreaEffectCloud areaEffectCloudEntity && areaEffectCloudEntity.getOwner() instanceof Player playerEntity) {
             player = playerEntity;
-        } else if (attacker instanceof TameableEntity tameableEntity && tameableEntity.getOwner() instanceof PlayerEntity playerEntity) {
+        } else if (attacker instanceof TamableAnimal tameableEntity && tameableEntity.getOwner() instanceof Player playerEntity) {
             player = playerEntity;
-        } else if (!(entity instanceof PlayerEntity) && !(GetOffMyLawn.CONFIG.relaxedEntitySourceProtectionCheck && source instanceof LivingEntity) && source != null && (attacker == null || source == attacker)) {
-            return hasMatchingClaims(world, entity.getBlockPos(), ((OriginOwner) source).goml$getOriginSafe());
+        } else if (!(entity instanceof Player) && !(GetOffMyLawn.CONFIG.relaxedEntitySourceProtectionCheck && source instanceof LivingEntity) && source != null && (attacker == null || source == attacker)) {
+            return hasMatchingClaims(world, entity.blockPosition(), ((OriginOwner) source).goml$getOriginSafe());
         } else {
             return true;
         }
@@ -254,17 +260,17 @@ public class ClaimUtils {
 
         if ((GetOffMyLawn.CONFIG.allowDamagingNamedHostileMobs
                 || (GetOffMyLawn.CONFIG.allowDamagingUnnamedHostileMobs && entity.getCustomName() == null))
-                && entity instanceof HostileEntity
+                && entity instanceof Monster
         ) {
             return true;
         }
-        var claims = ClaimUtils.getClaimsAt(world, entity.getBlockPos());
+        var claims = ClaimUtils.getClaimsAt(world, entity.blockPosition());
 
         if (claims.isEmpty()) {
             return true;
         }
 
-        if (entity instanceof PlayerEntity attackedPlayer) {
+        if (entity instanceof Player attackedPlayer) {
             claims = claims.filter((e) -> e.getValue().hasAugment(GOMLBlocks.PVP_ARENA.getFirst()));
 
             if (claims.isEmpty()) {
@@ -290,11 +296,11 @@ public class ClaimUtils {
             }
         }
 
-        return EventHandlers.testPermission(claims, player, Hand.MAIN_HAND, entity.getBlockPos(), PermissionReason.ENTITY_PROTECTED) != ActionResult.FAIL;
+        return EventHandlers.testPermission(claims, player, InteractionHand.MAIN_HAND, entity.blockPosition(), PermissionReason.ENTITY_PROTECTED) != InteractionResult.FAIL;
     }
 
-    public static boolean canModify(World world, BlockPos pos, @Nullable PlayerEntity player) {
-        if (GetOffMyLawn.CONFIG.allowFakePlayersToModify && player != null && player.getClass() != ServerPlayerEntity.class && !world.isClient()) {
+    public static boolean canModify(Level world, BlockPos pos, @Nullable Player player) {
+        if (GetOffMyLawn.CONFIG.allowFakePlayersToModify && player != null && player.getClass() != ServerPlayer.class && !world.isClientSide()) {
             return true;
         }
 
@@ -307,7 +313,7 @@ public class ClaimUtils {
     }
 
     @Nullable
-    public static ClaimAnchorBlockEntity getAnchor(World world, Claim claim) {
+    public static ClaimAnchorBlockEntity getAnchor(Level world, Claim claim) {
         ClaimAnchorBlockEntity claimAnchor = (ClaimAnchorBlockEntity) world.getBlockEntity(claim.getOrigin());
 
         if (claimAnchor == null) {
@@ -326,101 +332,102 @@ public class ClaimUtils {
         return claimAnchor;
     }
 
-    public static List<Text> getClaimText(MinecraftServer server, Claim claim) {
+    public static List<Component> getClaimText(MinecraftServer server, Claim claim) {
         var owners = getPlayerNames(server, claim.getOwners());
         var trusted = getPlayerNames(server, claim.getTrusted());
 
-        var texts = new ArrayList<Text>();
+        var texts = new ArrayList<Component>();
 
-        texts.add(Text.translatable("text.goml.position",
-                Text.literal(claim.getOrigin().toShortString())
-                        .append(Text.literal(" (" + claim.getWorld().toString() + ")").formatted(Formatting.GRAY)).formatted(Formatting.WHITE)
-        ).formatted(Formatting.BLUE));
+        texts.add(Component.translatable("text.goml.position",
+                Component.literal(claim.getOrigin().toShortString())
+                        .append(Component.literal(" (" + claim.getWorld().toString() + ")").withStyle(ChatFormatting.GRAY)).withStyle(ChatFormatting.WHITE)
+        ).withStyle(ChatFormatting.BLUE));
 
-        texts.add(Text.translatable("text.goml.radius",
-                Text.literal("" + claim.getRadius()).formatted(Formatting.WHITE)
-        ).formatted(Formatting.YELLOW));
+        texts.add(Component.translatable("text.goml.radius",
+                Component.literal("" + claim.getRadius()).withStyle(ChatFormatting.WHITE)
+        ).withStyle(ChatFormatting.YELLOW));
 
         if (!owners.isEmpty()) {
-            texts.add(Text.translatable("text.goml.owners", owners.removeFirst()).formatted(Formatting.GOLD));
+            texts.add(Component.translatable("text.goml.owners", owners.removeFirst()).withStyle(ChatFormatting.GOLD));
 
             for (var text : owners) {
-                texts.add(Text.literal("   ").append(text));
+                texts.add(Component.literal("   ").append(text));
             }
         }
 
         if (!trusted.isEmpty()) {
-            texts.add(Text.translatable("text.goml.trusted", trusted.removeFirst()).formatted(Formatting.GREEN));
+            texts.add(Component.translatable("text.goml.trusted", trusted.removeFirst()).withStyle(ChatFormatting.GREEN));
 
             for (var text : trusted) {
-                texts.add(Text.literal("   ").append(text));
+                texts.add(Component.literal("   ").append(text));
             }
         }
 
         return texts;
     }
 
-    protected static final List<Text> getPlayerNames(MinecraftServer server, Collection<UUID> uuids) {
-        var list = new ArrayList<Text>();
+    protected static List<Component> getPlayerNames(MinecraftServer server, Collection<UUID> uuids) {
+        var list = new ArrayList<Component>();
 
-        var builder = new StringBuilder();
+        var builder = Component.empty();
         var iterator = uuids.iterator();
         while (iterator.hasNext()) {
-            var gameProfile = server.getApiServices().nameToIdCache().getByUuid(iterator.next());
+            var gameProfile = server.services().nameToIdCache().get(iterator.next());
             if (gameProfile.isPresent()) {
-                builder.append(gameProfile.get().name());
+                builder.append(Component.object(new PlayerSprite(ResolvableProfile.createUnresolved(gameProfile.get().id()), true)));
+                builder.append(" " + gameProfile.get().name());
 
                 if (iterator.hasNext()) {
                     builder.append(", ");
                 }
 
-                if (builder.length() > 32) {
-                    list.add(Text.literal(builder.toString()).formatted(Formatting.WHITE));
-                    builder = new StringBuilder();
+                if (builder.getString().length() > 32) {
+                    list.add(builder.withStyle(ChatFormatting.WHITE));
+                    builder = Component.empty();
                 }
             }
         }
-        if (!builder.isEmpty()) {
-            list.add(Text.literal(builder.toString()).formatted(Formatting.WHITE));
+        if (!builder.getSiblings().isEmpty()) {
+            list.add(builder.withStyle(ChatFormatting.WHITE));
         }
 
         return list;
     }
 
     @Deprecated
-    public static boolean claimMatchesWith(Entry<ClaimBox, Claim> claim, @Nullable PlayerEntity checkPlayer, BlockPos checkPos) {
+    public static boolean claimMatchesWith(Entry<ClaimBox, Claim> claim, @Nullable Player checkPlayer, BlockPos checkPos) {
         return canDestroyClaimBlock(claim, checkPlayer, checkPos);
     }
 
     @Deprecated
-    public static boolean playerHasPermission(Entry<ClaimBox, Claim> claim, PlayerEntity checkPlayer) {
-        return claim.getValue().getOwners().contains(checkPlayer.getUuid()) || isInAdminMode(checkPlayer);
+    public static boolean playerHasPermission(Entry<ClaimBox, Claim> claim, Player checkPlayer) {
+        return claim.getValue().getOwners().contains(checkPlayer.getUUID()) || isInAdminMode(checkPlayer);
     }
 
     public static ClaimBox createClaimBox(BlockPos pos, int radius) {
         if (GetOffMyLawn.CONFIG.makeClaimAreaChunkBound) {
-            var chunkPos = ChunkSectionPos.from(pos);
+            var chunkPos = SectionPos.of(pos);
 
             radius = (int) ((Math.ceil(radius / 16d) - 1) * 16) + 8;
             var radiusY = (int) ((Math.ceil((radius * GetOffMyLawn.CONFIG.claimAreaHeightMultiplier) / 16d) - 1) * 16) + 8;
 
-            return new ClaimBox(chunkPos.getCenterPos(), radius, GetOffMyLawn.CONFIG.claimProtectsFullWorldHeight ? Short.MAX_VALUE : radiusY, true);
+            return new ClaimBox(chunkPos.center(), radius, GetOffMyLawn.CONFIG.claimProtectsFullWorldHeight ? Short.MAX_VALUE : radiusY, true);
         }
 
         return new ClaimBox(pos, radius, GetOffMyLawn.CONFIG.claimProtectsFullWorldHeight ? Short.MAX_VALUE : (int) (radius * GetOffMyLawn.CONFIG.claimAreaHeightMultiplier));
     }
 
-    public static Pair<Vec3d, Direction> getClosestXZBorder(Claim claim, Vec3d curPos) {
+    public static Tuple<Vec3, Direction> getClosestXZBorder(Claim claim, Vec3 curPos) {
         return getClosestXZBorder(claim, curPos, 0);
     }
 
-    public static Pair<Vec3d, Direction> getClosestXZBorder(Claim claim, Vec3d curPos, double extraDistance) {
+    public static Tuple<Vec3, Direction> getClosestXZBorder(Claim claim, Vec3 curPos, double extraDistance) {
         var box = claim.getClaimBox();
 
-        var center = box.noShift() ? Vec3d.of(box.origin()) : Vec3d.ofCenter(box.getOrigin());
+        var center = box.noShift() ? Vec3.atLowerCornerOf(box.origin()) : Vec3.atCenterOf(box.getOrigin());
         var vec = curPos.subtract(center);
         var r = (box.noShift() ? box.radius() - 0.5 : box.radius()) + extraDistance;
-        var angle = MathHelper.atan2(vec.z, vec.x);
+        var angle = Mth.atan2(vec.z, vec.x);
 
         var tan = Math.tan(angle);
 
@@ -432,15 +439,15 @@ public class ClaimUtils {
 
         Direction dir = null;
 
-        if (angle >= -MathHelper.HALF_PI / 2 && angle <= MathHelper.HALF_PI / 2) {
+        if (angle >= -Mth.HALF_PI / 2 && angle <= Mth.HALF_PI / 2) {
             x = r;
             z = tan * r;
             dir = Direction.EAST;
-        } else if (angle >= MathHelper.HALF_PI / 2 && angle <= MathHelper.HALF_PI * 3 / 2) {
+        } else if (angle >= Mth.HALF_PI / 2 && angle <= Mth.HALF_PI * 3 / 2) {
             x = 1 / tan * r;
             z = r;
             dir = Direction.SOUTH;
-        } else if (angle <= -MathHelper.HALF_PI / 2 && angle >= -MathHelper.HALF_PI * 3 / 2) {
+        } else if (angle <= -Mth.HALF_PI / 2 && angle >= -Mth.HALF_PI * 3 / 2) {
             x = -1 / tan * r;
             z = -r;
             dir = Direction.NORTH;
@@ -451,13 +458,13 @@ public class ClaimUtils {
         }
 
 
-        return new Pair<>(center.add(x, 0, z), dir);
+        return new Tuple<>(center.add(x, 0, z), dir);
     }
 
-    public static boolean hasMatchingClaims(World world, BlockPos target, BlockPos origin) {
+    public static boolean hasMatchingClaims(Level world, BlockPos target, BlockPos origin) {
         return hasMatchingClaims(world, target, origin, null);
     }
-    public static boolean hasMatchingClaims(World world, BlockPos target, BlockPos origin, @Nullable UUID uuid) {
+    public static boolean hasMatchingClaims(Level world, BlockPos target, BlockPos origin, @Nullable UUID uuid) {
         var claims = ClaimUtils.getClaimsAt(world, target);
 
         if (claims.isEmpty()) {
@@ -509,11 +516,11 @@ public class ClaimUtils {
     // From https://lospec.com/palette-list/minecraft-concrete (matches block order so matches goggles).
     private static final int[] CLAIM_COLORS_RGB = new int[]{0xcfd5d6, 0xe06101, 0xa9309f, 0x2489c7, 0xf1af15, 0x5ea918, 0xd5658f, 0x373a3e, 0x7d7d73, 0x157788, 0x64209c, 0x2d2f8f, 0x603c20, 0x495b24, 0x8e2121, 0x080a0f};
 
-    private static final BlockState[] CLAIM_COLORS_BLOCKS = Registries.BLOCK.stream().filter((b) -> {
-        var id = Registries.BLOCK.getId(b);
+    private static final BlockState[] CLAIM_COLORS_BLOCKS = BuiltInRegistries.BLOCK.stream().filter((b) -> {
+        var id = BuiltInRegistries.BLOCK.getKey(b);
 
         return id.getNamespace().equals("minecraft") && id.getPath().endsWith("_concrete");
-    }).map((b) -> b.getDefaultState()).collect(Collectors.toList()).toArray(new BlockState[0]);
+    }).map((b) -> b.defaultBlockState()).collect(Collectors.toList()).toArray(new BlockState[0]);
 
     public static int webMapClaimColor(Claim claim) {
         return CLAIM_COLORS_RGB[claimColorIndex(claim)];
@@ -523,15 +530,15 @@ public class ClaimUtils {
         return CLAIM_COLORS_BLOCKS[claimColorIndex(claim)];
     }
 
-    public static void drawClaimInWorld(ServerPlayerEntity player, Claim claim) {
+    public static void drawClaimInWorld(ServerPlayer player, Claim claim) {
         var box = claim.getClaimBox().toBox();
-        var minPos = new BlockPos(box.x1(), Math.max(box.y1(), player.getEntityWorld().getBottomY()), box.z1());
-        var maxPos = new BlockPos(box.x2() - 1, Math.min(box.y2() - 1, player.getEntityWorld().getTopYInclusive()), box.z2() - 1);
+        var minPos = new BlockPos(box.x1(), Math.max(box.y1(), player.level().getMinY()), box.z1());
+        var maxPos = new BlockPos(box.x2() - 1, Math.min(box.y2() - 1, player.level().getMaxY()), box.z2() - 1);
 
         BlockState state = ClaimUtils.gogglesClaimColor(claim);
 
         WorldParticleUtils.render(player, minPos, maxPos,
-                new BlockStateParticleEffect(ParticleTypes.BLOCK_MARKER, state)
+                new BlockParticleOption(ParticleTypes.BLOCK_MARKER, state)
         );
     }
 }

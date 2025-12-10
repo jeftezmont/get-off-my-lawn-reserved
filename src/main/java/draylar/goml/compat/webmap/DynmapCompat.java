@@ -1,9 +1,5 @@
 package draylar.goml.compat.webmap;
 
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Box;
-import net.minecraft.world.World;
 import org.dynmap.DynmapCommonAPI;
 import org.dynmap.DynmapCommonAPIListener;
 import org.dynmap.markers.AreaMarker;
@@ -13,6 +9,10 @@ import org.dynmap.markers.MarkerSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 
 public class DynmapCompat extends WebmapCompat {
     private static final DynmapCompat INSTANCE = new DynmapCompat();
@@ -168,7 +168,7 @@ public class DynmapCompat extends WebmapCompat {
         }
 
         String worldName = resolveWorldName(marker.getWorld());
-        Box box = marker.getClaimBox().minecraftBox();
+        AABB box = marker.getClaimBox().minecraftBox();
 
         double minX = box.minX;
         double maxX = box.maxX;
@@ -196,17 +196,17 @@ public class DynmapCompat extends WebmapCompat {
     }
 
     // Handle legacy behavior around the nether/end dimension names
-    private String resolveWorldName(ServerWorld world) {
-        String levelName = world.getServer().getSaveProperties().getLevelName();
-        if (world.getRegistryKey().equals(World.OVERWORLD)) {
+    private String resolveWorldName(ServerLevel world) {
+        String levelName = world.getServer().getWorldData().getLevelName();
+        if (world.dimension().equals(Level.OVERWORLD)) {
             return levelName;
-        } else if (world.getRegistryKey().equals(World.NETHER)) {
+        } else if (world.dimension().equals(Level.NETHER)) {
             return "DIM-1";
-        } else if (world.getRegistryKey().equals(World.END)) {
+        } else if (world.dimension().equals(Level.END)) {
             return "DIM1";
         }
 
-        Identifier id = world.getRegistryKey().getValue();
+        Identifier id = world.dimension().identifier();
         return (id.getNamespace() + "_" + id.getPath()).replace(':', '_');
     }
 }

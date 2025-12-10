@@ -12,17 +12,13 @@ import draylar.goml.registry.GOMLBlocks;
 import draylar.goml.registry.GOMLTags;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.player.*;
-import net.minecraft.entity.Tameable;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.registry.Registry;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -56,48 +52,48 @@ public class EventHandlers {
 
     private static void registerInteractEntityCallback() {
         UseEntityCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, entity, entityHitResult) -> {
-            if (world.isClient()) {
-                return ActionResult.PASS;
+            if (world.isClientSide()) {
+                return InteractionResult.PASS;
             }
 
             if (ClaimUtils.isInAdminMode(playerEntity)) {
-                return ActionResult.PASS;
+                return InteractionResult.PASS;
             }
 
             if (GetOffMyLawn.CONFIG.canInteract(entity)
-                    || entity.getType().isIn(GOMLTags.ALLOWED_INTERACTIONS_ENTITY)) {
-                return ActionResult.PASS;
+                    || entity.getType().is(GOMLTags.ALLOWED_INTERACTIONS_ENTITY)) {
+                return InteractionResult.PASS;
             }
 
-            if (entity instanceof Tameable tameable && tameable.getOwner() == playerEntity) {
-                return ActionResult.PASS;
+            if (entity instanceof OwnableEntity tameable && tameable.getOwner() == playerEntity) {
+                return InteractionResult.PASS;
             }
 
-            if (entity instanceof PlayerEntity attackedPlayer) {
-                var claims = ClaimUtils.getClaimsAt(world, entity.getBlockPos());
+            if (entity instanceof Player attackedPlayer) {
+                var claims = ClaimUtils.getClaimsAt(world, entity.blockPosition());
 
                 if (claims.isEmpty()) {
-                    return ActionResult.PASS;
+                    return InteractionResult.PASS;
                 } else {
                     claims = claims.filter((e) -> e.getValue().hasAugment(GOMLBlocks.PVP_ARENA.getFirst()));
 
                     if (claims.isEmpty()) {
-                        return GetOffMyLawn.CONFIG.enablePvPinClaims ? ActionResult.PASS : ActionResult.FAIL;
+                        return GetOffMyLawn.CONFIG.enablePvPinClaims ? InteractionResult.PASS : InteractionResult.FAIL;
                     } else {
-                        var obj = new MutableObject<ActionResult>(ActionResult.PASS);
+                        var obj = new MutableObject<InteractionResult>(InteractionResult.PASS);
                         claims.forEach((e) -> {
-                            if (obj.getValue() instanceof ActionResult.Fail) {
+                            if (obj.getValue() instanceof InteractionResult.Fail) {
                                 return;
                             }
                             var claim = e.getValue();
 
                             obj.setValue(switch (claim.getData(GOMLBlocks.PVP_ARENA.getFirst().key)) {
-                                case EVERYONE -> ActionResult.PASS;
-                                case DISABLED -> ActionResult.FAIL;
+                                case EVERYONE -> InteractionResult.PASS;
+                                case DISABLED -> InteractionResult.FAIL;
                                 case TRUSTED -> claim.hasPermission(playerEntity) && claim.hasPermission(attackedPlayer)
-                                        ? ActionResult.PASS : ActionResult.FAIL;
+                                        ? InteractionResult.PASS : InteractionResult.FAIL;
                                 case UNTRUSTED -> !claim.hasPermission(playerEntity) && !claim.hasPermission(attackedPlayer)
-                                        ? ActionResult.PASS : ActionResult.FAIL;
+                                        ? InteractionResult.PASS : InteractionResult.FAIL;
                             });
                         });
 
@@ -106,30 +102,30 @@ public class EventHandlers {
                 }
             }
 
-            Selection<Entry<ClaimBox, Claim>> claimsFound = ClaimUtils.getClaimsAt(world, entity.getBlockPos());
-            return testPermission(claimsFound, playerEntity, hand, entity.getBlockPos(), PermissionReason.ENTITY_PROTECTED);
+            Selection<Entry<ClaimBox, Claim>> claimsFound = ClaimUtils.getClaimsAt(world, entity.blockPosition());
+            return testPermission(claimsFound, playerEntity, hand, entity.blockPosition(), PermissionReason.ENTITY_PROTECTED);
         });
     }
 
     private static void registerAttackEntityCallback() {
         AttackEntityCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, entity, entityHitResult) -> {
-            if (world.isClient()) {
-                return ActionResult.PASS;
+            if (world.isClientSide()) {
+                return InteractionResult.PASS;
             }
-            return ClaimUtils.canDamageEntity(world, entity, world.getDamageSources().playerAttack(playerEntity)) ? ActionResult.PASS : ActionResult.FAIL;
+            return ClaimUtils.canDamageEntity(world, entity, world.damageSources().playerAttack(playerEntity)) ? InteractionResult.PASS : InteractionResult.FAIL;
         });
     }
 
     private static void registerInteractBlockCallback() {
         UseBlockCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, blockHitResult) -> {
-            if (world.isClient()) {
-                return ActionResult.PASS;
+            if (world.isClientSide()) {
+                return InteractionResult.PASS;
             }
-            if (!(playerEntity.getStackInHand(hand).getItem() instanceof BlockItem)) {
+            if (!(playerEntity.getItemInHand(hand).getItem() instanceof BlockItem)) {
                 var blockState = world.getBlockState(blockHitResult.getBlockPos());
 
-                if (GetOffMyLawn.CONFIG.canInteract(blockState.getBlock()) || blockState.isIn(GOMLTags.ALLOWED_INTERACTIONS_BLOCKS)) {
-                    return ActionResult.PASS;
+                if (GetOffMyLawn.CONFIG.canInteract(blockState.getBlock()) || blockState.is(GOMLTags.ALLOWED_INTERACTIONS_BLOCKS)) {
+                    return InteractionResult.PASS;
                 }
             }
 
@@ -137,9 +133,9 @@ public class EventHandlers {
 
             var ac = testPermission(claimsFound, playerEntity, hand, blockHitResult.getBlockPos(), PermissionReason.AREA_PROTECTED);
 
-            if (ac == ActionResult.PASS) {
-                var claimsFound2 = ClaimUtils.getClaimsAt(world, blockHitResult.getBlockPos().offset(blockHitResult.getSide()));
-                return testPermission(claimsFound2, playerEntity, hand, blockHitResult.getBlockPos().offset(blockHitResult.getSide()), PermissionReason.AREA_PROTECTED);
+            if (ac == InteractionResult.PASS) {
+                var claimsFound2 = ClaimUtils.getClaimsAt(world, blockHitResult.getBlockPos().relative(blockHitResult.getDirection()));
+                return testPermission(claimsFound2, playerEntity, hand, blockHitResult.getBlockPos().relative(blockHitResult.getDirection()), PermissionReason.AREA_PROTECTED);
             }
 
             return ac;
@@ -148,59 +144,59 @@ public class EventHandlers {
 
     private static void registerBreakBlockCallback() {
         AttackBlockCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, blockPos, direction) -> {
-            if (world.isClient()) {
-                return ActionResult.PASS;
+            if (world.isClientSide()) {
+                return InteractionResult.PASS;
             }
             Selection<Entry<ClaimBox, Claim>> claimsFound = ClaimUtils.getClaimsAt(world, blockPos);
             return testPermission(claimsFound, playerEntity, hand, blockPos, PermissionReason.BLOCK_PROTECTED);
         });
 
         PlayerBlockBreakEvents.BEFORE.register(GOML_PHASE, (world, player, pos, state, blockEntity) -> {
-            if (world.isClient()) {
+            if (world.isClientSide()) {
                 return true;
             }
             Selection<Entry<ClaimBox, Claim>> claimsFound = ClaimUtils.getClaimsAt(world, pos);
-            ActionResult result = testPermission(claimsFound, player, Hand.MAIN_HAND, pos, PermissionReason.BLOCK_PROTECTED);
-            return !result.equals(ActionResult.FAIL);
+            InteractionResult result = testPermission(claimsFound, player, InteractionHand.MAIN_HAND, pos, PermissionReason.BLOCK_PROTECTED);
+            return !result.equals(InteractionResult.FAIL);
         });
     }
 
     private static void registerAnchorAttackCallback() {
         AttackBlockCallback.EVENT.register(GOML_PHASE, (playerEntity, world, hand, blockPos, direction) -> {
-            if (world.isClient()) {
-                return ActionResult.PASS;
+            if (world.isClientSide()) {
+                return InteractionResult.PASS;
             }
             var be = world.getBlockEntity(blockPos);
 
             if (be instanceof ClaimAnchorBlockEntity) {
                 if (!(((ClaimAnchorBlockEntity) be).getClaim().isOwner(playerEntity) || ClaimUtils.isInAdminMode(playerEntity))) {
-                    return ActionResult.FAIL;
+                    return InteractionResult.FAIL;
                 }
             }
 
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
     }
 
     @ApiStatus.Internal
-    public static ActionResult testPermission(Selection<Entry<ClaimBox, Claim>> claims, PlayerEntity player, Hand hand, BlockPos pos, PermissionReason reason) {
-        if (player.getEntityWorld().isClient()) {
-            return ActionResult.PASS;
+    public static InteractionResult testPermission(Selection<Entry<ClaimBox, Claim>> claims, Player player, InteractionHand hand, BlockPos pos, PermissionReason reason) {
+        if (player.level().isClientSide()) {
+            return InteractionResult.PASS;
         }
 
         if (!claims.isEmpty()) {
             boolean noPermission = claims.anyMatch((Entry<ClaimBox, Claim> boxInfo) -> !boxInfo.getValue().hasPermission(player));
 
             if (noPermission && !ClaimUtils.isInAdminMode(player)) {
-                ActionResult check = ClaimEvents.PERMISSION_DENIED.invoker().check(player, player.getEntityWorld(), hand, pos, reason);
+                InteractionResult check = ClaimEvents.PERMISSION_DENIED.invoker().check(player, player.level(), hand, pos, reason);
 
-                if (check.isAccepted() || check.equals(ActionResult.PASS)) {
-                    player.sendMessage(reason.getReason(), true);
-                    return ActionResult.FAIL;
+                if (check.consumesAction() || check.equals(InteractionResult.PASS)) {
+                    player.displayClientMessage(reason.getReason(), true);
+                    return InteractionResult.FAIL;
                 }
             }
         }
 
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 }

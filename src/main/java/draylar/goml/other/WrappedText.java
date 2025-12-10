@@ -3,10 +3,10 @@ package draylar.goml.other;
 import eu.pb4.placeholders.api.ParserContext;
 import eu.pb4.placeholders.api.TextParserUtils;
 import eu.pb4.placeholders.api.node.TextNode;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
-public record WrappedText(Text text, TextNode node, String input) {
+public record WrappedText(Component text, TextNode node, String input) {
     public static WrappedText of(String input) {
         var val = TextParserUtils.formatNodes(input);
         return new WrappedText(val.toText(ParserContext.of(), true), val, input);
@@ -17,7 +17,7 @@ public record WrappedText(Text text, TextNode node, String input) {
         return new WrappedText(val.toText(ParserContext.of(), true), val, input);
     }
 
-    public MutableText mutableText() {
+    public MutableComponent mutableText() {
         return this.text.copy();
     }
 }

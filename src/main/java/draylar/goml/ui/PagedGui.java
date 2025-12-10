@@ -6,15 +6,16 @@ import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.elements.GuiElementBuilderInterface;
 import eu.pb4.sgui.api.elements.GuiElementInterface;
 import eu.pb4.sgui.api.gui.SimpleGui;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,8 +26,8 @@ public abstract class PagedGui extends SimpleGui {
     protected int page = 0;
     public boolean ignoreCloseCallback;
 
-    public PagedGui(ServerPlayerEntity player, @Nullable Runnable closeCallback) {
-        super(ScreenHandlerType.GENERIC_9X5, player, false);
+    public PagedGui(ServerPlayer player, @Nullable Runnable closeCallback) {
+        super(MenuType.GENERIC_9x5, player, false);
         this.closeCallback = closeCallback;
     }
 
@@ -107,7 +108,7 @@ public abstract class PagedGui extends SimpleGui {
             case 3 -> DisplayElement.nextPage(this);
             case 7 -> DisplayElement.of(
                     new GuiElementBuilder(Items.STRUCTURE_VOID)
-                            .setName(Text.translatable(this.closeCallback != null ? "text.goml.gui.back" : "text.goml.gui.close").formatted(Formatting.RED))
+                            .setName(Component.translatable(this.closeCallback != null ? "text.goml.gui.back" : "text.goml.gui.close").withStyle(ChatFormatting.RED))
                             .hideDefaultTooltip()
                             .setCallback((x, y, z) -> {
                                 playClickSound(this.player);
@@ -122,7 +123,7 @@ public abstract class PagedGui extends SimpleGui {
         private static final DisplayElement EMPTY = DisplayElement.of(new GuiElement(ItemStack.EMPTY, GuiElementInterface.EMPTY_CALLBACK));
         private static final DisplayElement FILLER = DisplayElement.of(
                 new GuiElementBuilder(Items.WHITE_STAINED_GLASS_PANE)
-                        .setName(Text.empty())
+                        .setName(Component.empty())
                         .hideTooltip()
         );
 
@@ -142,7 +143,7 @@ public abstract class PagedGui extends SimpleGui {
             if (gui.canNextPage()) {
                 return DisplayElement.of(
                         new GuiElementBuilder(Items.PLAYER_HEAD)
-                                .setName(Text.translatable("text.goml.gui.next_page").formatted(Formatting.WHITE))
+                                .setName(Component.translatable("text.goml.gui.next_page").withStyle(ChatFormatting.WHITE))
                                 .hideDefaultTooltip()
                                 .setSkullOwner(GOMLTextures.GUI_NEXT_PAGE)
                                 .setCallback((x, y, z) -> {
@@ -153,7 +154,7 @@ public abstract class PagedGui extends SimpleGui {
             } else {
                 return DisplayElement.of(
                         new GuiElementBuilder(Items.PLAYER_HEAD)
-                                .setName(Text.translatable("text.goml.gui.next_page").formatted(Formatting.DARK_GRAY))
+                                .setName(Component.translatable("text.goml.gui.next_page").withStyle(ChatFormatting.DARK_GRAY))
                                 .hideDefaultTooltip()
                                 .setSkullOwner(GOMLTextures.GUI_NEXT_PAGE_BLOCKED)
                 );
@@ -164,7 +165,7 @@ public abstract class PagedGui extends SimpleGui {
             if (gui.canPreviousPage()) {
                 return DisplayElement.of(
                         new GuiElementBuilder(Items.PLAYER_HEAD)
-                                .setName(Text.translatable("text.goml.gui.previous_page").formatted(Formatting.WHITE))
+                                .setName(Component.translatable("text.goml.gui.previous_page").withStyle(ChatFormatting.WHITE))
                                 .hideDefaultTooltip()
                                 .setSkullOwner(GOMLTextures.GUI_PREVIOUS_PAGE)
                                 .setCallback((x, y, z) -> {
@@ -175,7 +176,7 @@ public abstract class PagedGui extends SimpleGui {
             } else {
                 return DisplayElement.of(
                         new GuiElementBuilder(Items.PLAYER_HEAD)
-                                .setName(Text.translatable("text.goml.gui.previous_page").formatted(Formatting.DARK_GRAY))
+                                .setName(Component.translatable("text.goml.gui.previous_page").withStyle(ChatFormatting.DARK_GRAY))
                                 .hideDefaultTooltip()
                                 .setSkullOwner(GOMLTextures.GUI_PREVIOUS_PAGE_BLOCKED)
                 );
@@ -191,7 +192,9 @@ public abstract class PagedGui extends SimpleGui {
         }
     }
 
-    public static final void playClickSound(ServerPlayerEntity player) {
-        player.playSoundToPlayer(SoundEvents.UI_BUTTON_CLICK.value(), SoundCategory.MASTER, 1, 1);
+    public static final void playClickSound(ServerPlayer player) {
+        player.connection.send(new ClientboundSoundEntityPacket(
+                SoundEvents.UI_BUTTON_CLICK, SoundSource.UI, player,1, 1, player.getRandom().nextLong()
+        ));
     }
 }

@@ -10,16 +10,16 @@ import draylar.goml.api.Claim;
 import draylar.goml.api.ClaimUtils;
 import draylar.goml.api.event.ClaimEvents;
 import draylar.goml.api.event.ServerPlayerUpdateEvents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 import net.fabricmc.loader.api.FabricLoader;
 
 public abstract class WebmapCompat {
     public static final String MARKER_SET_ID = "gomlMarkerSet";
-    public static final String MARKER_SET_LABEL = Text.translatable("text.goml.webmap.claims", "Claims").getString();
+    public static final String MARKER_SET_LABEL = Component.translatable("text.goml.webmap.claims", "Claims").getString();
 
     public static final Boolean HIDE_BY_DEFAULT = false; // TODO: add config options?
 
@@ -58,7 +58,7 @@ public abstract class WebmapCompat {
             registerIntegration(DynmapCompat.getInstance());
         }
 
-        for (ServerWorld world : _server.getWorlds()) {
+        for (ServerLevel world : _server.getAllLevels()) {
             GetOffMyLawn.CLAIM.get(world).getClaims().values().forEach(WebmapCompat::createClaimMarker);
         }
     }
@@ -120,9 +120,9 @@ public abstract class WebmapCompat {
     }
 
     // Update all claim markers where the player is an owner or trusted
-    private static final void updateClaimMarkersForPlayer(ServerPlayerEntity player) {
-        var uuid = player.getUuid();
-        for (ServerWorld world : _server.getWorlds()) {
+    private static final void updateClaimMarkersForPlayer(ServerPlayer player) {
+        var uuid = player.getUUID();
+        for (ServerLevel world : _server.getAllLevels()) {
             ClaimUtils.getClaimsOwnedBy(world, uuid).forEach(claim -> updateClaimMarker(claim.getValue()));
             ClaimUtils.getClaimsTrusted(world, uuid).forEach(claim -> updateClaimMarker(claim.getValue()));
         }
@@ -134,7 +134,7 @@ public abstract class WebmapCompat {
             return;
         }
 
-        if (_server.isOnThread()) {
+        if (_server.isSameThread()) {
             task.run();
         } else {
             _server.execute(task);

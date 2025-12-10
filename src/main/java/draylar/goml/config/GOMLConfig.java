@@ -7,15 +7,13 @@ import draylar.goml.GetOffMyLawn;
 import draylar.goml.other.WrappedText;
 import draylar.goml.registry.GOMLBlocks;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.block.Block;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.registry.Registries;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.registry.Registry;
-import net.minecraft.world.World;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
@@ -70,12 +68,12 @@ public class GOMLConfig {
         return this.allowedEntityInteraction.contains(entity.getType());
     }
 
-    public boolean isBlacklisted(World world, Box claimBox) {
-        if (this.dimensionBlacklist.contains(world.getRegistryKey().getValue())) {
+    public boolean isBlacklisted(Level world, Box claimBox) {
+        if (this.dimensionBlacklist.contains(world.dimension().identifier())) {
             return true;
         }
 
-        var list = this.regionBlacklist.get(world.getRegistryKey().getValue());
+        var list = this.regionBlacklist.get(world.dimension().identifier());
         if (list != null) {
             for (var box : list) {
                 if (box.intersectsClosed(claimBox)) {
@@ -95,8 +93,8 @@ public class GOMLConfig {
         return "player".equalsIgnoreCase(claimColorSource);
     }
 
-    public MutableText prefix(Text text) {
-        return Text.empty().append(messagePrefix.text()).append(Text.literal(" ")).append(text);
+    public MutableComponent prefix(Component text) {
+        return Component.empty().append(messagePrefix.text()).append(Component.literal(" ")).append(text);
     }
 
     public static GOMLConfig loadOrCreateConfig() {

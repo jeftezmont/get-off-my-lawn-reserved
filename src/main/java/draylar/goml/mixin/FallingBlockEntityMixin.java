@@ -4,12 +4,6 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import draylar.goml.api.ClaimUtils;
 import draylar.goml.other.OriginOwner;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,31 +12,37 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.HashSet;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.Level;
 
 @Mixin(FallingBlockEntity.class)
 public abstract class FallingBlockEntityMixin extends Entity implements OriginOwner {
-    public FallingBlockEntityMixin(EntityType<?> type, World world) {
+    public FallingBlockEntityMixin(EntityType<?> type, Level world) {
         super(type, world);
     }
 
-    @ModifyExpressionValue(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/block/BlockState;canPlaceAt(Lnet/minecraft/world/WorldView;Lnet/minecraft/util/math/BlockPos;)Z"))
+    @ModifyExpressionValue(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;canSurvive(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z"))
     private boolean cantPlaceOnClaim(boolean bool, @Local(ordinal = 0) BlockPos pos) {
-        if (this.getEntityWorld().isClient()) {
+        if (this.level().isClientSide()) {
             return bool;
         }
         if (bool) {
-            return ClaimUtils.hasMatchingClaims(this.getEntityWorld(), pos, this.goml$getOriginSafe());
+            return ClaimUtils.hasMatchingClaims(this.level(), pos, this.goml$getOriginSafe());
         }
 
         return false;
     }
 
-    @Inject(method = "handleFallDamage", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;ceil(D)I", ordinal = 0), cancellable = true)
+    @Inject(method = "causeFallDamage", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;ceil(D)I", ordinal = 0), cancellable = true)
     private void blockFallDamage(double fallDistance, float damagePerDistance, DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
-        if (this.getEntityWorld().isClient()) {
+        if (this.level().isClientSide()) {
             return;
         }
-        if (!ClaimUtils.hasMatchingClaims(this.getEntityWorld(), this.getBlockPos(), this.goml$getOriginSafe())) {
+        if (!ClaimUtils.hasMatchingClaims(this.level(), this.blockPosition(), this.goml$getOriginSafe())) {
             cir.setReturnValue(false);
         }
     }

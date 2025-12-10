@@ -5,8 +5,8 @@ import com.google.gson.reflect.TypeToken;
 
 import draylar.goml.GetOffMyLawn;
 import eu.pb4.polymer.core.api.block.PolymerHeadBlock;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -64,7 +64,7 @@ public class PlayerRecord {
         }
 
         if (this.name == null) {
-            this.name = Text.translatable("text.goml.webmap.label.unknown", "Unknown?").getString();
+            this.name = Component.translatable("text.goml.webmap.label.unknown", "Unknown?").getString();
         }
     }
     /**
@@ -127,7 +127,7 @@ public class PlayerRecord {
             }
 
             // If name is still null, attempt to retrieve it from UserCache
-            server.getApiServices().nameToIdCache().getByUuid(uuid).ifPresent(
+            server.services().nameToIdCache().get(uuid).ifPresent(
                 profile -> this.name = profile.name()
             );
         }

@@ -5,20 +5,19 @@ import com.jamieswhiteshirt.rtree3i.Selection;
 import draylar.goml.api.ClaimBox;
 import draylar.goml.api.Claim;
 import draylar.goml.api.ClaimUtils;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.BucketItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.RaycastContext;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -33,19 +32,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(BucketItem.class)
 public class BucketItemMixin extends Item {
 
-    @Shadow @Final private Fluid fluid;
+    @Shadow @Final private Fluid content;
 
-    public BucketItemMixin(Settings settings) {
+    public BucketItemMixin(Properties settings) {
         super(settings);
     }
 
     @Inject(at = @At("HEAD"), method = "use", cancellable = true)
-    private void goml_preventBucketUsageInClaims(World world, PlayerEntity user, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
-        if (world.isClient()) {
+    private void goml_preventBucketUsageInClaims(Level world, Player user, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+        if (world.isClientSide()) {
             return;
         }
 
-        HitResult hitResult = raycast(world, user, this.fluid == Fluids.EMPTY ? RaycastContext.FluidHandling.SOURCE_ONLY : RaycastContext.FluidHandling.NONE);
+        HitResult hitResult = getPlayerPOVHitResult(world, user, this.content == Fluids.EMPTY ? ClipContext.Fluid.SOURCE_ONLY : ClipContext.Fluid.NONE);
         BlockHitResult blockHitResult = (BlockHitResult) hitResult;
         BlockPos blockPos = blockHitResult.getBlockPos();
 
@@ -55,8 +54,8 @@ public class BucketItemMixin extends Item {
             boolean noPermission = claimsFound.anyMatch((Entry<ClaimBox, Claim> boxInfo) -> !boxInfo.getValue().hasPermission(user));
 
             if(noPermission) {
-                user.sendMessage(Text.literal("This block is protected by a claim."), true);
-                cir.setReturnValue(ActionResult.FAIL);
+                user.displayClientMessage(Component.literal("This block is protected by a claim."), true);
+                cir.setReturnValue(InteractionResult.FAIL);
             }
         }
     }

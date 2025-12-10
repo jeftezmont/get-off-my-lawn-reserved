@@ -2,16 +2,15 @@ package draylar.goml.api.group;
 
 import com.mojang.authlib.GameProfile;
 import draylar.goml.api.Claim;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.PlayerConfigEntry;
-import net.minecraft.text.Text;
-
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.players.NameAndId;
+import net.minecraft.world.item.ItemStack;
 
 public interface PlayerGroup {
-    Text selfDisplayName();
-    Text fullDisplayName();
+    Component selfDisplayName();
+    Component fullDisplayName();
     Key getKey();
     ItemStack icon();
     PlayerGroupProvider provider();
@@ -22,7 +21,7 @@ public interface PlayerGroup {
     boolean addClaim(Claim claim);
     boolean removeClaim(Claim claim);
 
-    record Member(PlayerConfigEntry profile, String role) {}
+    record Member(NameAndId profile, String role) {}
 
     record Key(String providerId, String groupId) {
         public String compact() {

@@ -4,44 +4,37 @@ import draylar.goml.GetOffMyLawn;
 import draylar.goml.api.ClaimUtils;
 import draylar.goml.api.WorldParticleUtils;
 import eu.pb4.polymer.core.api.item.PolymerItem;
-import net.minecraft.block.BlockState;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.item.*;
-import net.minecraft.item.equipment.ArmorMaterials;
-import net.minecraft.item.equipment.EquipmentType;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.particle.BlockStateParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.registry.Registry;
-import net.minecraft.world.World;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.equipment.ArmorMaterials;
+import net.minecraft.world.item.equipment.ArmorType;
 import org.jetbrains.annotations.Nullable;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 import java.util.stream.Collectors;
 
 public class GogglesItem extends Item implements PolymerItem {
-    public GogglesItem(Settings settings) {
-        super(settings.armor(ArmorMaterials.IRON, EquipmentType.HELMET).component(DataComponentTypes.MAX_DAMAGE, null));
+    public GogglesItem(Properties settings) {
+        super(settings.humanoidArmor(ArmorMaterials.IRON, ArmorType.HELMET).component(DataComponents.MAX_DAMAGE, null));
     }
 
     @Override
-    public void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, @Nullable EquipmentSlot slot) {
-        if (entity instanceof ServerPlayerEntity player && slot != null) {
-            if (player.age % 70 == 0) {
-                var distance = player.getEntityWorld().getServer().getPlayerManager().getViewDistance() * 16;
+    public void inventoryTick(ItemStack stack, ServerLevel world, Entity entity, @Nullable EquipmentSlot slot) {
+        if (entity instanceof ServerPlayer player && slot != null) {
+            if (player.tickCount % 70 == 0) {
+                var distance = player.level().getServer().getPlayerList().getViewDistance() * 16;
 
                 ClaimUtils.getClaimsInBox(
                         world,
-                        entity.getBlockPos().add(-distance, -distance, -distance),
-                        entity.getBlockPos().add(distance, distance, distance)).forEach(
+                        entity.blockPosition().offset(-distance, -distance, -distance),
+                        entity.blockPosition().offset(distance, distance, distance)).forEach(
                         claim -> {
                             ClaimUtils.drawClaimInWorld(player, claim.getValue());
                         });
@@ -50,7 +43,7 @@ public class GogglesItem extends Item implements PolymerItem {
     }
 
     @Override
-    public boolean hasGlint(ItemStack stack) {
+    public boolean isFoil(ItemStack stack) {
         return true;
     }
 

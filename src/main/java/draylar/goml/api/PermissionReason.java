@@ -1,19 +1,19 @@
 package draylar.goml.api;
 
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 public enum PermissionReason {
-    BLOCK_PROTECTED(Text.translatable("text.goml.block_protected")),
-    ENTITY_PROTECTED(Text.translatable("text.goml.entity_protected")),
-    AREA_PROTECTED(Text.translatable("text.goml.area_protected"));
+    BLOCK_PROTECTED(Component.translatable("text.goml.block_protected")),
+    ENTITY_PROTECTED(Component.translatable("text.goml.entity_protected")),
+    AREA_PROTECTED(Component.translatable("text.goml.area_protected"));
 
-    private Text reason;
+    private Component reason;
 
-    PermissionReason(Text reason) {
+    PermissionReason(Component reason) {
         this.reason = reason;
     }
 
-    public Text getReason() {
+    public Component getReason() {
         return reason;
     }
 }

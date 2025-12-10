@@ -6,18 +6,17 @@ import draylar.goml.api.ClaimBox;
 import draylar.goml.api.event.ClaimEvents;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.Items;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.stream.Collectors;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Items;
 
 public class AdminAugmentGui extends SimpleGui {
     private final Claim claim;
@@ -27,9 +26,9 @@ public class AdminAugmentGui extends SimpleGui {
     private ClaimBox claimBox;
 
 
-    public AdminAugmentGui(Claim claim, ServerPlayerEntity player, @Nullable Runnable onClose) {
-        super(ScreenHandlerType.HOPPER, player, false);
-        this.setTitle(Text.translatable("text.goml.gui.admin_settings.title"));
+    public AdminAugmentGui(Claim claim, ServerPlayer player, @Nullable Runnable onClose) {
+        super(MenuType.HOPPER, player, false);
+        this.setTitle(Component.translatable("text.goml.gui.admin_settings.title"));
         this.claim = claim;
         this.onClose = onClose;
         this.claimBox = claim.getClaimBox();
@@ -38,7 +37,7 @@ public class AdminAugmentGui extends SimpleGui {
 
 
         this.addSlot(new GuiElementBuilder(Items.STONE_SLAB)
-                .setName(Text.translatable("text.goml.radius", this.claimRadius))
+                .setName(Component.translatable("text.goml.radius", this.claimRadius))
                 .setCallback((i, a, c, g) -> {
                     PagedGui.playClickSound(this.player);
                     if (a.isLeft) {
@@ -46,11 +45,11 @@ public class AdminAugmentGui extends SimpleGui {
                     } else if (a.isRight) {
                         this.claimRadius += a.shift ? 10 : 1;
                     }
-                    g.getSlot(i).getItemStack().set(DataComponentTypes.CUSTOM_NAME, Text.translatable("text.goml.radius", this.claimRadius).setStyle(Style.EMPTY.withItalic(false)));
+                    g.getSlot(i).getItemStack().set(DataComponents.CUSTOM_NAME, Component.translatable("text.goml.radius", this.claimRadius).setStyle(Style.EMPTY.withItalic(false)));
                 })
         );
         this.addSlot(new GuiElementBuilder(Items.ANDESITE_WALL)
-                .setName(Text.translatable("text.goml.height", this.claimHeight))
+                .setName(Component.translatable("text.goml.height", this.claimHeight))
                 .setCallback((i, a, c, g) -> {
                     PagedGui.playClickSound(this.player);
                     if (a.isLeft) {
@@ -58,21 +57,21 @@ public class AdminAugmentGui extends SimpleGui {
                     } else if (a.isRight) {
                         this.claimHeight += a.shift ? 10 : 1;
                     }
-                    g.getSlot(i).getItemStack().set(DataComponentTypes.CUSTOM_NAME, Text.translatable("text.goml.height", this.claimHeight).setStyle(Style.EMPTY.withItalic(false)));
+                    g.getSlot(i).getItemStack().set(DataComponents.CUSTOM_NAME, Component.translatable("text.goml.height", this.claimHeight).setStyle(Style.EMPTY.withItalic(false)));
 
                 })
         );
 
         this.addSlot(new GuiElementBuilder(Items.SLIME_BALL)
-                .setName(Text.translatable("text.goml.apply"))
+                .setName(Component.translatable("text.goml.apply"))
                 .setCallback((i, a, c, g) -> {
                     PagedGui.playClickSound(this.player);
-                    GetOffMyLawn.CLAIM.get(claim.getWorldInstance(player.getEntityWorld().getServer())).remove(this.claim);
+                    GetOffMyLawn.CLAIM.get(claim.getWorldInstance(player.level().getServer())).remove(this.claim);
                     var oldSize = claim.getClaimBox();
                     this.claimBox = new ClaimBox(this.claimBox.getOrigin(), this.claimRadius, this.claimHeight, this.claimBox.noShift());
                     claim.internal_setClaimBox(this.claimBox);
-                    GetOffMyLawn.CLAIM.get(claim.getWorldInstance(player.getEntityWorld().getServer())).add(this.claim);
-                    claim.internal_updateChunkCount(player.getEntityWorld().getServer().getWorld(RegistryKey.of(RegistryKeys.WORLD, this.claim.getWorld())));
+                    GetOffMyLawn.CLAIM.get(claim.getWorldInstance(player.level().getServer())).add(this.claim);
+                    claim.internal_updateChunkCount(player.level().getServer().getLevel(ResourceKey.create(Registries.DIMENSION, this.claim.getWorld())));
                     ClaimEvents.CLAIM_RESIZED.invoker().onResizeEvent(claim, oldSize, this.claimBox);
                 })
         );

@@ -3,11 +3,6 @@ package draylar.goml.ui;
 import com.mojang.authlib.GameProfile;
 import draylar.goml.registry.GOMLTextures;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
-import net.minecraft.item.Items;
-import net.minecraft.server.PlayerConfigEntry;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,12 +10,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
+import net.minecraft.world.item.Items;
 
 @ApiStatus.Internal
 public abstract class GenericPlayerListGui extends PagedGui {
     public List<UUID> uuids = new ArrayList<>();
 
-    public GenericPlayerListGui(ServerPlayerEntity player, @Nullable Runnable onClose) {
+    public GenericPlayerListGui(ServerPlayer player, @Nullable Runnable onClose) {
         super(player, onClose);
     }
 
@@ -47,14 +47,14 @@ public abstract class GenericPlayerListGui extends PagedGui {
     }
 
     protected DisplayElement getPlayerElement(UUID uuid) {
-        var optional = this.player.getEntityWorld().getServer().getApiServices().nameToIdCache().getByUuid(uuid);
+        var optional = this.player.level().getServer().services().nameToIdCache().get(uuid);
         var exist = optional.isPresent();
         var gameProfile = exist ? optional.get() : null;
 
         var builder = new GuiElementBuilder(exist ? Items.PLAYER_HEAD : Items.SKELETON_SKULL)
-                .setName(Text.literal(exist ? gameProfile.name() : "<" + uuid.toString() + ">")
-                        .formatted(Formatting.WHITE)
-                );
+                .setName(Component.literal(exist ? gameProfile.name() : "<" + uuid.toString() + ">")
+                        .withStyle(ChatFormatting.WHITE)
+                ).hideDefaultTooltip();
 
         if (exist) {
             builder.setProfile(uuid);
@@ -66,7 +66,7 @@ public abstract class GenericPlayerListGui extends PagedGui {
         return DisplayElement.of(builder);
     }
 
-    protected void modifyBuilder(GuiElementBuilder builder, Optional<PlayerConfigEntry> optional, UUID uuid) {
+    protected void modifyBuilder(GuiElementBuilder builder, Optional<NameAndId> optional, UUID uuid) {
     }
 
 

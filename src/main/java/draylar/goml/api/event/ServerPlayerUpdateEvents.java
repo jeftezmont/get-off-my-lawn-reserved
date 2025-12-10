@@ -2,7 +2,7 @@ package draylar.goml.api.event;
 
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 
 public class ServerPlayerUpdateEvents {
     public static final Event<PlayerNameChangedEvent> NAME_CHANGED = EventFactory.createArrayBacked(PlayerNameChangedEvent.class,
@@ -15,6 +15,6 @@ public class ServerPlayerUpdateEvents {
 
     @FunctionalInterface
     public interface PlayerNameChangedEvent {
-        void onNameChanged(ServerPlayerEntity player);
+        void onNameChanged(ServerPlayer player);
     }
 }

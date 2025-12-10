@@ -9,18 +9,14 @@ import draylar.goml.api.ClaimUtils;
 import draylar.goml.registry.GOMLEntities;
 import eu.pb4.polymer.core.api.utils.PolymerObject;
 import net.fabricmc.fabric.api.util.NbtType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtLong;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -41,18 +37,18 @@ public class ClaimAnchorBlockEntity extends BlockEntity implements PolymerObject
         super(GOMLEntities.CLAIM_ANCHOR, pos, state);
     }
 
-    public static <T extends BlockEntity> void tick(World eWorld, BlockPos pos, BlockState state, T blockEntity) {
-        if (eWorld instanceof ServerWorld world && blockEntity instanceof ClaimAnchorBlockEntity anchor) {
+    public static <T extends BlockEntity> void tick(Level eWorld, BlockPos pos, BlockState state, T blockEntity) {
+        if (eWorld instanceof ServerLevel world && blockEntity instanceof ClaimAnchorBlockEntity anchor) {
 
             // Claim is null, world probably just loaded, re-grab claim
             if (anchor.claim == null) {
-                var collect = ClaimUtils.getClaimsAt(anchor.world, anchor.pos).filter(x -> x.getValue().getOrigin().equals(pos)).collect(Collectors.toList());
+                var collect = ClaimUtils.getClaimsAt(anchor.level, anchor.worldPosition).filter(x -> x.getValue().getOrigin().equals(pos)).collect(Collectors.toList());
 
                 if (collect.isEmpty()) {
-                    GetOffMyLawn.LOGGER.warn(String.format("A Claim Anchor at %s tried to initialize its claim, but one could not be found! Was the claim removed without the anchor?", anchor.pos));
-                    world.breakBlock(pos, true);
+                    GetOffMyLawn.LOGGER.warn(String.format("A Claim Anchor at %s tried to initialize its claim, but one could not be found! Was the claim removed without the anchor?", anchor.worldPosition));
+                    world.destroyBlock(pos, true);
                     for (var lPos : anchor.loadPositions) {
-                        world.breakBlock(lPos, true);
+                        world.destroyBlock(lPos, true);
                     }
                     return;
                 } else {
@@ -63,7 +59,7 @@ public class ClaimAnchorBlockEntity extends BlockEntity implements PolymerObject
             }
 
             if (anchor.claim.isDestroyed()) {
-                world.breakBlock(pos, true);
+                world.destroyBlock(pos, true);
                 return;
             }
 
@@ -71,12 +67,12 @@ public class ClaimAnchorBlockEntity extends BlockEntity implements PolymerObject
             if (!anchor.loadPositions.isEmpty()) {
                 anchor.claim.internal_disableUpdates();
                 for (BlockPos foundPos : anchor.loadPositions) {
-                    BlockEntity foundEntity = anchor.world.getBlockEntity(foundPos);
+                    BlockEntity foundEntity = anchor.level.getBlockEntity(foundPos);
 
                     if (foundEntity instanceof ClaimAugmentBlockEntity be) {
                         anchor.claim.addAugment(foundPos, be.getAugment());
                     } else {
-                        GetOffMyLawn.LOGGER.warn(String.format("A Claim Anchor at %s tried to load a child at %s, but none were found!", anchor.pos.toString(), foundPos.toString()));
+                        GetOffMyLawn.LOGGER.warn(String.format("A Claim Anchor at %s tried to load a child at %s, but none were found!", anchor.worldPosition.toString(), foundPos.toString()));
                     }
                 }
 
@@ -87,9 +83,9 @@ public class ClaimAnchorBlockEntity extends BlockEntity implements PolymerObject
     }
 
     @Override
-    protected void writeData(WriteView view) {
-        super.writeData(view);
-        var positions = view.getListAppender(AUGMENT_LIST_KEY, Codec.LONG);
+    protected void saveAdditional(ValueOutput view) {
+        super.saveAdditional(view);
+        var positions = view.list(AUGMENT_LIST_KEY, Codec.LONG);
         for (BlockPos loadPosition : this.loadPositions) {
             positions.add(loadPosition.asLong());
         }
@@ -101,21 +97,21 @@ public class ClaimAnchorBlockEntity extends BlockEntity implements PolymerObject
     }
 
     @Override
-    public void readData(ReadView view) {
-        var positions = view.getTypedListView(AUGMENT_LIST_KEY, Codec.LONG);
+    public void loadAdditional(ValueInput view) {
+        var positions = view.listOrEmpty(AUGMENT_LIST_KEY, Codec.LONG);
         positions.forEach(sub -> {
-            BlockPos foundPos = BlockPos.fromLong(sub);
+            BlockPos foundPos = BlockPos.of(sub);
             this.loadPositions.add(foundPos);
         });
 
-        super.readData(view);
+        super.loadAdditional(view);
     }
 
     @Override
-    public void onBlockReplaced(BlockPos pos, BlockState oldState) {
-        super.onBlockReplaced(pos, oldState);
-        if (this.world != null) {
-            ClaimUtils.getClaimsAt(world, pos).forEach(claimedArea -> {
+    public void preRemoveSideEffects(BlockPos pos, BlockState oldState) {
+        super.preRemoveSideEffects(pos, oldState);
+        if (this.level != null) {
+            ClaimUtils.getClaimsAt(level, pos).forEach(claimedArea -> {
                 if (ClaimUtils.canDestroyClaimBlock(claimedArea, null, pos)) {
                     claimedArea.getValue().destroy();
                 }
@@ -161,7 +157,7 @@ public class ClaimAnchorBlockEntity extends BlockEntity implements PolymerObject
     }
 
     @Deprecated
-    public List<PlayerEntity> getPreviousTickPlayers() {
+    public List<Player> getPreviousTickPlayers() {
         return List.of();
     }
 
@@ -170,8 +166,8 @@ public class ClaimAnchorBlockEntity extends BlockEntity implements PolymerObject
     }
 
     @Override
-    public void markRemoved() {
+    public void setRemoved() {
         // Reset players in claim
-        super.markRemoved();
+        super.setRemoved();
     }
 }

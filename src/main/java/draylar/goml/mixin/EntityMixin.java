@@ -3,13 +3,13 @@ package draylar.goml.mixin;
 import draylar.goml.api.ClaimUtils;
 import draylar.goml.other.LegacyNbtHelper;
 import draylar.goml.other.OriginOwner;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -20,34 +20,34 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Entity.class)
 public abstract class EntityMixin implements OriginOwner {
-    @Shadow private World world;
+    @Shadow private Level level;
 
-    @Shadow public abstract BlockPos getBlockPos();
+    @Shadow public abstract BlockPos blockPosition();
 
     @Unique
     private BlockPos originPos;
 
-    @Inject(method = "isAlwaysInvulnerableTo", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "isInvulnerableToBase", at = @At("HEAD"), cancellable = true)
     private void goml$isInvulnerable(DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
-        if (this.world.isClient()) {
+        if (this.level.isClientSide()) {
             return;
         }
 
-        if (!ClaimUtils.canDamageEntity(this.world, (Entity) (Object) this, damageSource)) {
+        if (!ClaimUtils.canDamageEntity(this.level, (Entity) (Object) this, damageSource)) {
             cir.setReturnValue(true);
         }
     }
 
-    @Inject(method = "writeData", at = @At("TAIL"))
-    private void writeGomlNbt(WriteView view, CallbackInfo ci) {
+    @Inject(method = "saveWithoutId", at = @At("TAIL"))
+    private void writeGomlNbt(ValueOutput view, CallbackInfo ci) {
         if (this.originPos != null) {
-            view.put("goml:origin", NbtCompound.CODEC, LegacyNbtHelper.fromBlockPos(this.originPos));
+            view.store("goml:origin", CompoundTag.CODEC, LegacyNbtHelper.fromBlockPos(this.originPos));
         }
     }
 
-    @Inject(method = "readData", at = @At("TAIL"))
-    private void readGomlNbt(ReadView view, CallbackInfo ci) {
-        this.originPos = view.read("goml:origin", NbtCompound.CODEC).map(LegacyNbtHelper::toBlockPos).orElse(null);
+    @Inject(method = "load", at = @At("TAIL"))
+    private void readGomlNbt(ValueInput view, CallbackInfo ci) {
+        this.originPos = view.read("goml:origin", CompoundTag.CODEC).map(LegacyNbtHelper::toBlockPos).orElse(null);
     }
 
     @Override
@@ -62,6 +62,6 @@ public abstract class EntityMixin implements OriginOwner {
 
     @Override
     public void goml$tryFilling() {
-        this.originPos = this.getBlockPos();
+        this.originPos = this.blockPosition();
     }
 }

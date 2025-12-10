@@ -3,18 +3,17 @@ package draylar.goml.other;
 import draylar.goml.api.Claim;
 import draylar.goml.api.group.PlayerGroup;
 import draylar.goml.api.group.PlayerGroupProvider;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.DyedColorComponent;
-import net.minecraft.component.type.TooltipDisplayComponent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.scoreboard.Team;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.NameToIdCache;
-import net.minecraft.util.UserCache;
+import net.minecraft.server.players.UserNameToIdResolver;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.DyedItemColor;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.scores.PlayerTeam;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -25,7 +24,7 @@ public class VanillaTeamGroups {
 
     }
 
-    public static void onRemove(Team team) {
+    public static void onRemove(PlayerTeam team) {
         var value = TeamGroup.CACHE.get(team);
         if (value != null) {
             for (var claim : List.copyOf(value.claims)) {
@@ -37,22 +36,22 @@ public class VanillaTeamGroups {
     private record TeamProvider() implements PlayerGroupProvider {
         public static final PlayerGroupProvider INSTANCE = new TeamProvider();
         @Override
-        public @Nullable PlayerGroup getGroupOf(PlayerEntity player) {
-            var team = player.getScoreboardTeam();
+        public @Nullable PlayerGroup getGroupOf(Player player) {
+            var team = player.getTeam();
             if (team != null) {
-                return TeamGroup.of(player.getEntityWorld().getServer().getApiServices().nameToIdCache(), team);
+                return TeamGroup.of(player.level().getServer().services().nameToIdCache(), team);
             }
             return null;
         }
 
         @Override
         public @Nullable PlayerGroup getGroupOf(MinecraftServer server, UUID uuid) {
-            var profile = server.getApiServices().nameToIdCache().getByUuid(uuid);
+            var profile = server.services().nameToIdCache().get(uuid);
 
             if (profile.isPresent()) {
-                var team = server.getScoreboard().getTeam(profile.get().name());
+                var team = server.getScoreboard().getPlayerTeam(profile.get().name());
                 if (team  != null) {
-                    return TeamGroup.of(server.getApiServices().nameToIdCache(), team);
+                    return TeamGroup.of(server.services().nameToIdCache(), team);
                 }
             }
             return null;
@@ -61,26 +60,26 @@ public class VanillaTeamGroups {
         @Override
         @Nullable
         public PlayerGroup fromKey(MinecraftServer server, PlayerGroup.Key key) {
-            var team = server.getScoreboard().getTeam(key.groupId());
+            var team = server.getScoreboard().getPlayerTeam(key.groupId());
             if (team  != null) {
-                return TeamGroup.of(server.getApiServices().nameToIdCache(), team);
+                return TeamGroup.of(server.services().nameToIdCache(), team);
             }
             return null;
         }
 
         @Override
-        public Text getName() {
-            return Text.translatable("text.goml.vanilla_team.name");
+        public Component getName() {
+            return Component.translatable("text.goml.vanilla_team.name");
         }
     }
 
-    private record TeamGroup(NameToIdCache cache, Team team, HashSet<Claim> claims) implements PlayerGroup {
-        public static final WeakHashMap<Team, TeamGroup> CACHE = new WeakHashMap<>();
-        private TeamGroup(NameToIdCache cache, Team guild) {
+    private record TeamGroup(UserNameToIdResolver cache, PlayerTeam team, HashSet<Claim> claims) implements PlayerGroup {
+        public static final WeakHashMap<PlayerTeam, TeamGroup> CACHE = new WeakHashMap<>();
+        private TeamGroup(UserNameToIdResolver cache, PlayerTeam guild) {
             this(cache, guild, new HashSet<>());
         }
 
-        public static PlayerGroup of(NameToIdCache cache, Team team) {
+        public static PlayerGroup of(UserNameToIdResolver cache, PlayerTeam team) {
             var g = CACHE.get(team);
 
             if (g == null) {
@@ -92,13 +91,13 @@ public class VanillaTeamGroups {
         }
 
         @Override
-        public Text selfDisplayName() {
+        public Component selfDisplayName() {
             return this.team.getDisplayName();
         }
 
         @Override
-        public Text fullDisplayName() {
-            return Text.translatable("text.goml.vanilla_team.display", Text.empty().append(this.selfDisplayName()).formatted(Formatting.WHITE));
+        public Component fullDisplayName() {
+            return Component.translatable("text.goml.vanilla_team.display", Component.empty().append(this.selfDisplayName()).withStyle(ChatFormatting.WHITE));
         }
 
         @Override
@@ -109,9 +108,9 @@ public class VanillaTeamGroups {
         @Override
         public ItemStack icon() {
             var stack = new ItemStack(Items.LEATHER_HELMET);
-            var i = this.team.getColor().getColorValue();
-            stack.set(DataComponentTypes.DYED_COLOR, new DyedColorComponent(i != null ? i : 0xFFFFFF));
-            stack.set(DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplayComponent.DEFAULT.with(DataComponentTypes.DYED_COLOR, false));
+            var i = this.team.getColor().getColor();
+            stack.set(DataComponents.DYED_COLOR, new DyedItemColor(i != null ? i : 0xFFFFFF));
+            stack.set(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT.withHidden(DataComponents.DYED_COLOR, false));
             return stack;
         }
 
@@ -122,8 +121,8 @@ public class VanillaTeamGroups {
 
         @Override
         public boolean isPartOf(UUID uuid) {
-            var profile = this.cache.getByUuid(uuid);
-            return profile.isPresent() && this.team.getPlayerList().contains(profile.get().name());
+            var profile = this.cache.get(uuid);
+            return profile.isPresent() && this.team.getPlayers().contains(profile.get().name());
         }
 
         @Override
@@ -134,8 +133,8 @@ public class VanillaTeamGroups {
         @Override
         public List<Member> getMembers() {
             List<Member> list = new ArrayList<>();
-            for (var x : this.team.getPlayerList()) {
-                var profile = this.cache.findByName(x);
+            for (var x : this.team.getPlayers()) {
+                var profile = this.cache.get(x);
                 if (profile.isPresent()) {
                     Member member = new Member(profile.get(), "");
                     list.add(member);

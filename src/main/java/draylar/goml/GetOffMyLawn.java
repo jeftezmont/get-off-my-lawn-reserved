@@ -25,13 +25,13 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.core.SectionPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -42,13 +42,13 @@ import java.util.function.Consumer;
 public class GetOffMyLawn implements ModInitializer, WorldComponentInitializer {
     public static final String MOD_ID = "goml";
     public static final ComponentKey<ClaimComponent> CLAIM = ComponentRegistryV3.INSTANCE.getOrCreate(id("claims"), ClaimComponent.class);
-    public static final ItemGroup GROUP = ItemGroup.create(null, -1)
-            .displayName(Text.translatable("itemGroup.goml.group"))
+    public static final CreativeModeTab GROUP = CreativeModeTab.builder(null, -1)
+            .title(Component.translatable("itemGroup.goml.group"))
             .icon(() -> new ItemStack(GOMLBlocks.WITHERED_CLAIM_ANCHOR.getSecond()))
-            .entries((ctx, c) -> {
-                GOMLBlocks.ANCHORS.forEach(c::add);
-                GOMLBlocks.AUGMENTS.forEach(c::add);
-                GOMLItems.BASE_ITEMS.forEach(c::add);
+            .displayItems((ctx, c) -> {
+                GOMLBlocks.ANCHORS.forEach(c::accept);
+                GOMLBlocks.AUGMENTS.forEach(c::accept);
+                GOMLItems.BASE_ITEMS.forEach(c::accept);
             })
             .build();
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
@@ -57,7 +57,7 @@ public class GetOffMyLawn implements ModInitializer, WorldComponentInitializer {
     public static List<Runnable> NEXT_TICK_TASK = new ArrayList<>();
 
     public static Identifier id(String name) {
-        return Identifier.of(MOD_ID, name);
+        return Identifier.fromNamespaceAndPath(MOD_ID, name);
     }
 
     @Override
@@ -72,7 +72,7 @@ public class GetOffMyLawn implements ModInitializer, WorldComponentInitializer {
 
         PolymerItemGroupUtils.registerPolymerItemGroup(id("group"), GROUP);
 
-        CommonProtection.register(Identifier.of(MOD_ID, "claim_protection"), GomlProtectionProvider.INSTANCE);
+        CommonProtection.register(Identifier.fromNamespaceAndPath(MOD_ID, "claim_protection"), GomlProtectionProvider.INSTANCE);
 
         ServerLifecycleEvents.SERVER_STARTING.register((s) -> {
             CardboardWarning.checkAndAnnounce();
@@ -104,13 +104,13 @@ public class GetOffMyLawn implements ModInitializer, WorldComponentInitializer {
         registry.register(CLAIM, WorldClaimComponent::new);
     }
 
-    private static void onChunkEvent(ServerWorld world, WorldChunk chunk, Consumer<Claim> chunkHandler) {
+    private static void onChunkEvent(ServerLevel world, LevelChunk chunk, Consumer<Claim> chunkHandler) {
         CLAIM.get(world).getClaims().entries().filter(x -> {
-            var minX = ChunkSectionPos.getSectionCoord(x.getKey().toBox().x1());
-            var minZ = ChunkSectionPos.getSectionCoord(x.getKey().toBox().z1());
+            var minX = SectionPos.blockToSectionCoord(x.getKey().toBox().x1());
+            var minZ = SectionPos.blockToSectionCoord(x.getKey().toBox().z1());
 
-            var maxX = ChunkSectionPos.getSectionCoord(x.getKey().toBox().x2());
-            var maxZ = ChunkSectionPos.getSectionCoord(x.getKey().toBox().z2());
+            var maxX = SectionPos.blockToSectionCoord(x.getKey().toBox().x2());
+            var maxZ = SectionPos.blockToSectionCoord(x.getKey().toBox().z2());
 
             return (minX <= chunk.getPos().x && maxX >= chunk.getPos().x && minZ <= chunk.getPos().z && maxZ >= chunk.getPos().z);
         }).forEach(x -> chunkHandler.accept(x.getValue()));

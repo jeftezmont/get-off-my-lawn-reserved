@@ -5,16 +5,16 @@ import draylar.goml.api.Claim;
 import draylar.goml.api.group.PlayerGroup;
 import draylar.goml.registry.GOMLTextures;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
-import net.minecraft.item.Items;
-import net.minecraft.server.PlayerConfigEntry;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
+import net.minecraft.world.item.Items;
 
 @ApiStatus.Internal
 public class ClaimPlayerListGui extends GenericPlayerListGui {
@@ -25,10 +25,10 @@ public class ClaimPlayerListGui extends GenericPlayerListGui {
     private final boolean canModifyTrusted;
     private final List<PlayerGroup> groups = new ArrayList<>();
 
-    public ClaimPlayerListGui(ServerPlayerEntity player, Claim claim, boolean canModifyTrusted, boolean canModifyOwners, boolean isAdmin, @Nullable Runnable onClose) {
+    public ClaimPlayerListGui(ServerPlayer player, Claim claim, boolean canModifyTrusted, boolean canModifyOwners, boolean isAdmin, @Nullable Runnable onClose) {
         super(player, onClose);
         this.claim = claim;
-        this.setTitle(Text.translatable("text.goml.gui.player_list.title"));
+        this.setTitle(Component.translatable("text.goml.gui.player_list.title"));
         this.canModifyOwners = canModifyOwners;
         this.canModifyTrusted = canModifyTrusted;
         this.isAdmin = isAdmin;
@@ -36,7 +36,7 @@ public class ClaimPlayerListGui extends GenericPlayerListGui {
         this.open();
     }
 
-    public static void open(ServerPlayerEntity player, Claim claim, boolean admin, @Nullable Runnable onClose) {
+    public static void open(ServerPlayer player, Claim claim, boolean admin, @Nullable Runnable onClose) {
         new ClaimPlayerListGui(player, claim, claim.isOwner(player) || admin, admin, admin, onClose);
     }
 
@@ -50,15 +50,15 @@ public class ClaimPlayerListGui extends GenericPlayerListGui {
 
         var builder = GuiElementBuilder.from(group.icon())
 
-                .setName(Text.empty().append(group.selfDisplayName()).append(Text.literal(" (").formatted(Formatting.DARK_GRAY)
-                        .append(Text.empty().append(group.provider().getName()).setStyle(Style.EMPTY.withColor(0x45abff))
-                        .append(Text.literal(")").formatted(Formatting.DARK_GRAY)))
+                .setName(Component.empty().append(group.selfDisplayName()).append(Component.literal(" (").withStyle(ChatFormatting.DARK_GRAY)
+                        .append(Component.empty().append(group.provider().getName()).setStyle(Style.EMPTY.withColor(0x45abff))
+                        .append(Component.literal(")").withStyle(ChatFormatting.DARK_GRAY)))
                         )
                 ).hideDefaultTooltip();
 
 
         if (this.canModifyTrusted) {
-            builder.addLoreLine(Text.translatable("text.goml.gui.click_to_remove"));
+            builder.addLoreLine(Component.translatable("text.goml.gui.click_to_remove"));
             builder.setCallback((x, y, z) -> {
                 playClickSound(player);
                 this.claim.untrust(group);
@@ -85,7 +85,7 @@ public class ClaimPlayerListGui extends GenericPlayerListGui {
         return switch (id) {
             case 5 -> this.canModifyTrusted
                     ? DisplayElement.of(new GuiElementBuilder(Items.PLAYER_HEAD)
-                    .setName(Text.translatable("text.goml.gui.player_list.add_player").formatted(Formatting.GREEN))
+                    .setName(Component.translatable("text.goml.gui.player_list.add_player").withStyle(ChatFormatting.GREEN))
                     .setSkullOwner(GOMLTextures.GUI_ADD)
                     .setCallback((x, y, z) -> {
                         playClickSound(this.player);
@@ -94,7 +94,7 @@ public class ClaimPlayerListGui extends GenericPlayerListGui {
                         this.ignoreCloseCallback = false;
                         new GenericPlayerAndGroupSelectionGui(
                                 this.player,
-                                Text.translatable("text.goml.gui.player_add_gui.title"),
+                                Component.translatable("text.goml.gui.player_add_gui.title"),
                                 (p) -> !this.claim.hasDirectPermission(p.id()),
                                 (p) -> !this.claim.getGroups().contains(p),
                                 (p) -> this.claim.trust(p.id()),
@@ -107,22 +107,22 @@ public class ClaimPlayerListGui extends GenericPlayerListGui {
     }
 
     @Override
-    protected void modifyBuilder(GuiElementBuilder builder, Optional<PlayerConfigEntry> optional, UUID uuid) {
+    protected void modifyBuilder(GuiElementBuilder builder, Optional<NameAndId> optional, UUID uuid) {
         var exist = optional.isPresent();
         var gameProfile = exist ? optional.get() : null;
         var isOwner = this.claim.isOwner(uuid);
         var canRemove = isOwner ? this.canModifyOwners : this.canModifyTrusted;
 
-        builder.setName(Text.literal(exist ? gameProfile.name() : uuid.toString())
-                .formatted(isOwner ? Formatting.GOLD : Formatting.WHITE).append(isOwner
-                        ? Text.literal(" (").formatted(Formatting.DARK_GRAY)
-                        .append(Text.translatable("text.goml.owner").formatted(Formatting.WHITE))
-                        .append(Text.literal(")").formatted(Formatting.DARK_GRAY))
-                        : Text.empty()
+        builder.setName(Component.literal(exist ? gameProfile.name() : uuid.toString())
+                .withStyle(isOwner ? ChatFormatting.GOLD : ChatFormatting.WHITE).append(isOwner
+                        ? Component.literal(" (").withStyle(ChatFormatting.DARK_GRAY)
+                        .append(Component.translatable("text.goml.owner").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(")").withStyle(ChatFormatting.DARK_GRAY))
+                        : Component.empty()
                 ));
 
         if (canRemove) {
-            builder.addLoreLine(Text.translatable("text.goml.gui.click_to_remove"));
+            builder.addLoreLine(Component.translatable("text.goml.gui.click_to_remove"));
             builder.setCallback((x, y, z) -> {
                 playClickSound(player);
                 (isOwner ? this.claim.getOwners() : this.claim.getTrusted()).remove(uuid);

@@ -2,34 +2,32 @@ package draylar.goml.item;
 
 import eu.pb4.polymer.core.api.block.PolymerHeadBlock;
 import eu.pb4.polymer.core.api.item.PolymerHeadBlockItem;
-import net.minecraft.block.Block;
-import net.minecraft.component.type.TooltipDisplayComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.world.World;
-
 import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.level.block.Block;
 
 public class TooltippedBlockItem extends PolymerHeadBlockItem {
 
     private final int lines;
 
-    public <T extends Block & PolymerHeadBlock> TooltippedBlockItem(T block, Settings settings, int lines) {
+    public <T extends Block & PolymerHeadBlock> TooltippedBlockItem(T block, Properties settings, int lines) {
         super(block, settings);
         this.lines = lines;
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, TooltipContext context, TooltipDisplayComponent displayComponent, Consumer<Text> textConsumer, TooltipType type) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type) {
         this.addLines(textConsumer);
     }
 
-    public void addLines(Consumer<Text> textConsumer) {
+    public void addLines(Consumer<Component> textConsumer) {
         for (int i = 1; i <= lines; i++) {
-            textConsumer.accept(Text.translatable(String.format("%s.description.%d", getTranslationKey(), i)).formatted(Formatting.GRAY));
+            textConsumer.accept(Component.translatable(String.format("%s.description.%d", getDescriptionId(), i)).withStyle(ChatFormatting.GRAY));
         }
     }
 }

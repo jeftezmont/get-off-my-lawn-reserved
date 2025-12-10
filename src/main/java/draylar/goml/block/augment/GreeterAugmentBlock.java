@@ -7,30 +7,30 @@ import draylar.goml.block.ClaimAugmentBlock;
 import draylar.goml.ui.PagedGui;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.AnvilInputGui;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 public class GreeterAugmentBlock extends ClaimAugmentBlock {
 
     public static final DataKey<String> MESSAGE_KEY = DataKey.ofString(GetOffMyLawn.id("greeter/message"), "Welcome %player on my claim!");
 
-    public GreeterAugmentBlock(Settings settings, String texture) {
+    public GreeterAugmentBlock(Properties settings, String texture) {
         super(settings, texture);
     }
 
     @Override
-    public void onPlayerEnter(Claim claim, PlayerEntity player) {
+    public void onPlayerEnter(Claim claim, Player player) {
         var text = claim.getData(MESSAGE_KEY);
 
         if (text != null && !text.isBlank()) {
-            player.sendMessage(GetOffMyLawn.CONFIG.messagePrefix.mutableText().append(Text.literal(" " + (text
+            player.displayClientMessage(GetOffMyLawn.CONFIG.messagePrefix.mutableText().append(Component.literal(" " + (text
                     .replace("%player", player.getName().getString())
                     .replace("%p", player.getName().getString()))
-            ).formatted(Formatting.GRAY)), false);
+            ).withStyle(ChatFormatting.GRAY)), false);
         }
     }
 
@@ -40,7 +40,7 @@ public class GreeterAugmentBlock extends ClaimAugmentBlock {
     }
 
     @Override
-    public void openSettings(Claim claim, ServerPlayerEntity player, @Nullable Runnable closeCallback) {
+    public void openSettings(Claim claim, ServerPlayer player, @Nullable Runnable closeCallback) {
         var currentInput = claim.getData(MESSAGE_KEY);
 
         var ui = new AnvilInputGui(player, false) {
@@ -51,22 +51,22 @@ public class GreeterAugmentBlock extends ClaimAugmentBlock {
                 }
             }
         };
-        ui.setTitle(Text.translatable("text.goml.gui.input_greeting.title"));
+        ui.setTitle(Component.translatable("text.goml.gui.input_greeting.title"));
         ui.setDefaultInputValue(currentInput);
 
         ui.setSlot(1,
                 new GuiElementBuilder(Items.SLIME_BALL)
-                        .setName(Text.translatable("text.goml.gui.input_greeting.set").formatted(Formatting.GREEN))
+                        .setName(Component.translatable("text.goml.gui.input_greeting.set").withStyle(ChatFormatting.GREEN))
                         .setCallback((index, clickType, actionType) -> {
                             PagedGui.playClickSound(player);
                             claim.setData(MESSAGE_KEY, ui.getInput());
-                            player.sendMessage(Text.translatable("text.goml.changed_greeting", Text.literal(ui.getInput()).formatted(Formatting.WHITE)).formatted(Formatting.GREEN), false);
+                            player.displayClientMessage(Component.translatable("text.goml.changed_greeting", Component.literal(ui.getInput()).withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GREEN), false);
                         })
         );
 
         ui.setSlot(2,
                 new GuiElementBuilder(Items.STRUCTURE_VOID)
-                        .setName(Text.translatable("text.goml.gui.input_greeting.close").formatted(Formatting.RED))
+                        .setName(Component.translatable("text.goml.gui.input_greeting.close").withStyle(ChatFormatting.RED))
                         .setCallback((index, clickType, actionType) -> {
                             PagedGui.playClickSound(player);
                             ui.close(closeCallback != null);

@@ -9,18 +9,16 @@ import draylar.goml.api.ClaimBox;
 import draylar.goml.api.ClaimUtils;
 import draylar.goml.registry.GOMLEntities;
 import eu.pb4.polymer.core.api.utils.PolymerObject;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.stream.Collectors;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 public class ClaimAugmentBlockEntity extends BlockEntity implements PolymerObject {
 
@@ -36,8 +34,8 @@ public class ClaimAugmentBlockEntity extends BlockEntity implements PolymerObjec
         super(GOMLEntities.CLAIM_AUGMENT, pos, state);
     }
 
-    public static <T extends BlockEntity> void tick(World world, BlockPos pos, BlockState state, T baseBlockEntity) {
-        if (world instanceof ServerWorld && baseBlockEntity instanceof ClaimAugmentBlockEntity entity) {
+    public static <T extends BlockEntity> void tick(Level world, BlockPos pos, BlockState state, T baseBlockEntity) {
+        if (world instanceof ServerLevel && baseBlockEntity instanceof ClaimAugmentBlockEntity entity) {
             // Parent is null and parent position is not null, assume we are just loading the augment from tags.
             if (entity.claim == null) {
                 Selection<Entry<ClaimBox, Claim>> claims = null;
@@ -52,35 +50,35 @@ public class ClaimAugmentBlockEntity extends BlockEntity implements PolymerObjec
                     if (claims.isNotEmpty()) {
                         entity.claim = claims.collect(Collectors.toList()).get(0).getValue();
                         entity.claimPosition = entity.claim.getOrigin();
-                        entity.markDirty();
+                        entity.setChanged();
                     } else {
-                        GetOffMyLawn.LOGGER.warn(String.format("An augment at %s tried to locate a parent at %s, but it could not be found!", entity.pos.toString(), entity.claimPosition.toString()));
-                        world.breakBlock(pos, true);
+                        GetOffMyLawn.LOGGER.warn(String.format("An augment at %s tried to locate a parent at %s, but it could not be found!", entity.worldPosition.toString(), entity.claimPosition.toString()));
+                        world.destroyBlock(pos, true);
                         return;
                     }
                 } else {
-                    GetOffMyLawn.LOGGER.warn(String.format("An augment at %s has an invalid parent and parent position! Removing now.", entity.pos.toString()));
-                    world.breakBlock(pos, true);
+                    GetOffMyLawn.LOGGER.warn(String.format("An augment at %s has an invalid parent and parent position! Removing now.", entity.worldPosition.toString()));
+                    world.destroyBlock(pos, true);
                     return;
                 }
             } else {
                 if (entity.claim.isDestroyed()) {
-                    world.breakBlock(pos, true);
+                    world.destroyBlock(pos, true);
                 }
             }
         }
     }
 
     @Override
-    public void onBlockReplaced(BlockPos pos, BlockState oldState) {
-        super.onBlockReplaced(pos, oldState);
-        if (this.world != null) {
+    public void preRemoveSideEffects(BlockPos pos, BlockState oldState) {
+        super.preRemoveSideEffects(pos, oldState);
+        if (this.level != null) {
             this.remove();
         }
     }
 
     @Override
-    protected void writeData(WriteView view) {
+    protected void saveAdditional(ValueOutput view) {
         if (this.claimPosition != null) {
             view.putLong(CLAIM_POSITION_KEY, this.claimPosition.asLong());
         }
@@ -88,27 +86,27 @@ public class ClaimAugmentBlockEntity extends BlockEntity implements PolymerObjec
             view.putLong(PARENT_POSITION_KEY, this.parentPosition.asLong());
         }
 
-        super.writeData(view);
+        super.saveAdditional(view);
     }
 
     @Override
-    public void readData(ReadView view) {
-        this.claimPosition = view.getOptionalLong(CLAIM_POSITION_KEY).map(BlockPos::fromLong).orElse(null);
+    public void loadAdditional(ValueInput view) {
+        this.claimPosition = view.getLong(CLAIM_POSITION_KEY).map(BlockPos::of).orElse(null);
 
-        this.parentPosition = BlockPos.fromLong(view.getLong(PARENT_POSITION_KEY, 0));
+        this.parentPosition = BlockPos.of(view.getLongOr(PARENT_POSITION_KEY, 0));
 
         if (this.augment == null) {
-            if (getCachedState().getBlock() instanceof Augment) {
-                initialize((Augment) getCachedState().getBlock());
+            if (getBlockState().getBlock() instanceof Augment) {
+                initialize((Augment) getBlockState().getBlock());
             }
         }
 
-        super.readData(view);
+        super.loadAdditional(view);
     }
 
     public void remove() {
         if (this.claim != null) {
-            claim.removeAugment(pos);
+            claim.removeAugment(worldPosition);
         }
     }
 
@@ -116,7 +114,7 @@ public class ClaimAugmentBlockEntity extends BlockEntity implements PolymerObjec
         this.parentPosition = pos;
         this.claimPosition = claim.getOrigin();
         this.claim = claim;
-        claim.addAugment(this.pos, this.getAugment());
+        claim.addAugment(this.worldPosition, this.getAugment());
     }
 
     public void initialize(Augment augment) {
@@ -127,7 +125,7 @@ public class ClaimAugmentBlockEntity extends BlockEntity implements PolymerObjec
         if (this.augment != null) {
             return augment;
         } else {
-            return this.getCachedState().getBlock() instanceof Augment augment ? augment : Augment.noop();
+            return this.getBlockState().getBlock() instanceof Augment augment ? augment : Augment.noop();
         }
     }
 

@@ -2,10 +2,6 @@ package draylar.goml.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import draylar.goml.api.ClaimUtils;
-import net.minecraft.block.piston.PistonHandler;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,21 +13,25 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.piston.PistonStructureResolver;
 
-@Mixin(PistonHandler.class)
-public class PistonHandlerMixin {
-    @Shadow @Final private List<BlockPos> movedBlocks;
-    @Shadow @Final private List<BlockPos> brokenBlocks;
-    @Shadow @Final private World world;
-    @Shadow @Final private Direction motionDirection;
+@Mixin(PistonStructureResolver.class)
+public class PistonStructureResolverMixin {
+    @Shadow @Final private List<BlockPos> toPush;
+    @Shadow @Final private List<BlockPos> toDestroy;
+    @Shadow @Final private Level level;
+    @Shadow @Final private Direction pushDirection;
     @Unique
     private boolean claimsEmpty;
     @Unique
     private HashSet<UUID> trusted;
 
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void storeClaimInfo(World world, BlockPos pos, Direction dir, boolean retracted, CallbackInfo ci) {
-        if (world.isClient()) {
+    private void storeClaimInfo(Level world, BlockPos pos, Direction dir, boolean retracted, CallbackInfo ci) {
+        if (world.isClientSide()) {
             return;
         }
         var claims = ClaimUtils.getClaimsAt(world, pos);
@@ -43,15 +43,15 @@ public class PistonHandlerMixin {
         });
     }
 
-    @ModifyReturnValue(method = "calculatePush", at = @At("RETURN"))
+    @ModifyReturnValue(method = "resolve", at = @At("RETURN"))
     private boolean preventMovement(boolean value) {
-        if (world.isClient()) {
+        if (level.isClientSide()) {
             return value;
         }
         if (value) {
-            if (!checkClaims(this.movedBlocks) || !checkClaims(this.brokenBlocks)) {
-                this.movedBlocks.clear();
-                this.brokenBlocks.clear();
+            if (!checkClaims(this.toPush) || !checkClaims(this.toDestroy)) {
+                this.toPush.clear();
+                this.toDestroy.clear();
                 return false;
             }
             return true;
@@ -63,7 +63,7 @@ public class PistonHandlerMixin {
     @Unique
     private boolean checkClaims(List<BlockPos> blocks) {
         for (var pos : blocks) {
-            var claims = ClaimUtils.getClaimsAt(this.world, pos);
+            var claims = ClaimUtils.getClaimsAt(this.level, pos);
 
             boolean firstFound = true;
 
@@ -75,8 +75,8 @@ public class PistonHandlerMixin {
                 return false;
             }
 
-            var mut = new BlockPos.Mutable();
-            claims = ClaimUtils.getClaimsAt(this.world, mut.set(pos).move(this.motionDirection));
+            var mut = new BlockPos.MutableBlockPos();
+            claims = ClaimUtils.getClaimsAt(this.level, mut.set(pos).move(this.pushDirection));
             if (claims.isEmpty() && this.claimsEmpty) {
                 continue;
             }

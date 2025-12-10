@@ -7,12 +7,11 @@ import draylar.goml.api.ClaimBox;
 import draylar.goml.api.ClaimUtils;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import me.lucko.fabric.api.permissions.v0.Permissions;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.ArrayList;
@@ -24,11 +23,11 @@ public class ClaimListGui extends PagedGui {
 
     private final List<Entry<ClaimBox, Claim>> claimList = new ArrayList<>();
 
-    protected ClaimListGui(ServerPlayerEntity player, GameProfile target) {
+    protected ClaimListGui(ServerPlayer player, GameProfile target) {
         super(player, null);
 
-        ClaimUtils.getClaimsWithAccess(player.getEntityWorld(), target.id()).forEach(this.claimList::add);
-        this.setTitle(Text.translatable(
+        ClaimUtils.getClaimsWithAccess(player.level(), target.id()).forEach(this.claimList::add);
+        this.setTitle(Component.translatable(
                 player.getGameProfile().id().equals(target.id()) ? "text.goml.your_claims" : "text.goml.someones_claims",
                 target.name()
         ));
@@ -36,7 +35,7 @@ public class ClaimListGui extends PagedGui {
         this.updateDisplay();
     }
 
-    public static void open(ServerPlayerEntity player, GameProfile target) {
+    public static void open(ServerPlayer player, GameProfile target) {
         new ClaimListGui(player, target).open();
     }
 
@@ -48,21 +47,21 @@ public class ClaimListGui extends PagedGui {
     @Override
     protected DisplayElement getElement(int id) {
         if (this.claimList.size() > id) {
-            var server = this.player.getEntityWorld().getServer();
+            var server = this.player.level().getServer();
             var entry = this.claimList.get(id);
             var claim = entry.getValue();
 
             var icon = GuiElementBuilder.from(claim.getIcon());
-            icon.setName(Text.literal(claim.getOrigin().toShortString()).append(Text.literal(" (" + claim.getWorld().toString() + ")").formatted(Formatting.GRAY)));
+            icon.setName(Component.literal(claim.getOrigin().toShortString()).append(Component.literal(" (" + claim.getWorld().toString() + ")").withStyle(ChatFormatting.GRAY)));
             var lore = ClaimUtils.getClaimText(server, entry.getValue());
             lore.removeFirst();
             icon.setLore(lore);
 
             icon.setCallback((x, y, z) -> {
                 if (Permissions.check(this.player, "goml.teleport", 3)) {
-                    var world = server.getWorld(RegistryKey.of(RegistryKeys.WORLD, claim.getWorld()));
+                    var world = server.getLevel(ResourceKey.create(Registries.DIMENSION, claim.getWorld()));
                     if (world != null) {
-                        this.player.teleport(world, claim.getOrigin().getX(), claim.getOrigin().getY() + 1, claim.getOrigin().getZ(), Set.of(), this.player.getYaw(), this.player.getPitch(), false);
+                        this.player.teleportTo(world, claim.getOrigin().getX(), claim.getOrigin().getY() + 1, claim.getOrigin().getZ(), Set.of(), this.player.getYRot(), this.player.getXRot(), false);
                     }
                 }
             });

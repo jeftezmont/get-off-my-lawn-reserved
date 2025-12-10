@@ -6,27 +6,27 @@ import draylar.goml.api.ClaimUtils;
 import eu.pb4.placeholders.api.PlaceholderResult;
 import eu.pb4.placeholders.api.Placeholders;
 import eu.pb4.placeholders.api.TextParserUtils;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 @ApiStatus.Internal
 public class PlaceholdersReg {
     public static void init() {
-        Placeholders.register(Identifier.of("goml", "claim_owners"), (ctx, arg) -> {
+        Placeholders.register(Identifier.fromNamespaceAndPath("goml", "claim_owners"), (ctx, arg) -> {
             if (!ctx.hasPlayer()) {
                 return PlaceholderResult.invalid("No player!");
             }
 
-            Text wildnessText = GetOffMyLawn.CONFIG.placeholderNoClaimOwners.text();
+            Component wildnessText = GetOffMyLawn.CONFIG.placeholderNoClaimOwners.text();
             if (arg != null) {
                 wildnessText = TextParserUtils.formatText(arg);
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().level(), ctx.player().blockPosition()).collect(Collectors.toList());
 
             if (claims.size() == 0) {
                 return PlaceholderResult.value(wildnessText);
@@ -35,7 +35,7 @@ public class PlaceholdersReg {
 
                 List<String> owners = new ArrayList<>();
                 for (UUID owner : claim.getValue().getOwners()) {
-                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
+                    var profile = ctx.server().services().nameToIdCache().get(owner);
 
                     if (profile.isPresent()) {
                         owners.add(profile.get().name());
@@ -43,21 +43,21 @@ public class PlaceholdersReg {
                 }
 
 
-                return PlaceholderResult.value(owners.size() > 0 ? Text.literal(String.join(", ", owners)) : wildnessText);
+                return PlaceholderResult.value(owners.size() > 0 ? Component.literal(String.join(", ", owners)) : wildnessText);
             }
         });
 
-        Placeholders.register(Identifier.of("goml", "claim_owners"), (ctx, arg) -> {
+        Placeholders.register(Identifier.fromNamespaceAndPath("goml", "claim_owners"), (ctx, arg) -> {
             if (!ctx.hasPlayer()) {
                 return PlaceholderResult.invalid("No player!");
             }
 
-            Text wildnessText = GetOffMyLawn.CONFIG.placeholderNoClaimOwners.text();
+            Component wildnessText = GetOffMyLawn.CONFIG.placeholderNoClaimOwners.text();
             if (arg != null) {
                 wildnessText = TextParserUtils.formatText(arg);
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().level(), ctx.player().blockPosition()).collect(Collectors.toList());
 
             if (claims.size() == 0) {
                 return PlaceholderResult.value(wildnessText);
@@ -66,7 +66,7 @@ public class PlaceholdersReg {
 
                 List<String> owners = new ArrayList<>();
                 for (UUID owner : claim.getValue().getOwners()) {
-                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
+                    var profile = ctx.server().services().nameToIdCache().get(owner);
 
                     if (profile.isPresent()) {
                         owners.add(profile.get().id().toString());
@@ -74,22 +74,22 @@ public class PlaceholdersReg {
                 }
 
 
-                return PlaceholderResult.value(owners.size() > 0 ? Text.literal(String.join(", ", owners)) : wildnessText);
+                return PlaceholderResult.value(owners.size() > 0 ? Component.literal(String.join(", ", owners)) : wildnessText);
             }
         });
 
-        Placeholders.register(Identifier.of("goml", "claim_trusted"), (ctx, arg) -> {
+        Placeholders.register(Identifier.fromNamespaceAndPath("goml", "claim_trusted"), (ctx, arg) -> {
             if (!ctx.hasPlayer()) {
                 return PlaceholderResult.invalid("No player!");
             }
 
 
-            Text wildnessText = GetOffMyLawn.CONFIG.placeholderNoClaimTrusted.text();
+            Component wildnessText = GetOffMyLawn.CONFIG.placeholderNoClaimTrusted.text();
             if (arg != null) {
                 wildnessText = TextParserUtils.formatText(arg);
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().level(), ctx.player().blockPosition()).collect(Collectors.toList());
 
             if (claims.size() == 0) {
                 return PlaceholderResult.value(wildnessText);
@@ -98,7 +98,7 @@ public class PlaceholdersReg {
 
                 List<String> trusted = new ArrayList<>();
                 for (UUID owner : claim.getValue().getTrusted()) {
-                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
+                    var profile = ctx.server().services().nameToIdCache().get(owner);
 
                     if (profile.isPresent()) {
                         trusted.add(profile.get().name());
@@ -106,22 +106,22 @@ public class PlaceholdersReg {
                 }
 
 
-                return PlaceholderResult.value(trusted.size() > 0 ? Text.literal(String.join(", ", trusted)) : wildnessText);
+                return PlaceholderResult.value(trusted.size() > 0 ? Component.literal(String.join(", ", trusted)) : wildnessText);
             }
         });
 
-        Placeholders.register(Identifier.of("goml", "claim_trusted_uuid"), (ctx, arg) -> {
+        Placeholders.register(Identifier.fromNamespaceAndPath("goml", "claim_trusted_uuid"), (ctx, arg) -> {
             if (!ctx.hasPlayer()) {
                 return PlaceholderResult.invalid("No player!");
             }
 
 
-            Text wildnessText = GetOffMyLawn.CONFIG.placeholderNoClaimTrusted.text();
+            Component wildnessText = GetOffMyLawn.CONFIG.placeholderNoClaimTrusted.text();
             if (arg != null) {
                 wildnessText = TextParserUtils.formatText(arg);
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().level(), ctx.player().blockPosition()).collect(Collectors.toList());
 
             if (claims.size() == 0) {
                 return PlaceholderResult.value(wildnessText);
@@ -130,7 +130,7 @@ public class PlaceholdersReg {
 
                 List<String> trusted = new ArrayList<>();
                 for (UUID owner : claim.getValue().getTrusted()) {
-                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
+                    var profile = ctx.server().services().nameToIdCache().get(owner);
 
                     if (profile.isPresent()) {
                         trusted.add(profile.get().id().toString());
@@ -138,11 +138,11 @@ public class PlaceholdersReg {
                 }
 
 
-                return PlaceholderResult.value(trusted.size() > 0 ? Text.literal(String.join(", ", trusted)) : wildnessText);
+                return PlaceholderResult.value(trusted.size() > 0 ? Component.literal(String.join(", ", trusted)) : wildnessText);
             }
         });
 
-        Placeholders.register(Identifier.of("goml", "claim_info"), (ctx, arg) -> {
+        Placeholders.register(Identifier.fromNamespaceAndPath("goml", "claim_info"), (ctx, arg) -> {
             if (!ctx.hasPlayer()) {
                 return PlaceholderResult.invalid("No player!");
             }
@@ -166,7 +166,7 @@ public class PlaceholdersReg {
                 }
             }
 
-            var claims = ClaimUtils.getClaimsAt(ctx.player().getEntityWorld(), ctx.player().getBlockPos()).collect(Collectors.toList());
+            var claims = ClaimUtils.getClaimsAt(ctx.player().level(), ctx.player().blockPosition()).collect(Collectors.toList());
 
 
             if (claims.size() == 0) {
@@ -178,7 +178,7 @@ public class PlaceholdersReg {
                 List<String> ownersUuid = new ArrayList<>();
 
                 for (UUID owner : claim.getValue().getOwners()) {
-                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
+                    var profile = ctx.server().services().nameToIdCache().get(owner);
 
                     if (profile.isPresent()) {
                         owners.add(profile.get().name());
@@ -188,7 +188,7 @@ public class PlaceholdersReg {
                 List<String> trusted = new ArrayList<>();
                 List<String> trustedUuid = new ArrayList<>();
                 for (UUID owner : claim.getValue().getTrusted()) {
-                    var profile = ctx.server().getApiServices().nameToIdCache().getByUuid(owner);
+                    var profile = ctx.server().services().nameToIdCache().get(owner);
 
                     if (profile.isPresent()) {
                         trusted.add(profile.get().name());
@@ -200,11 +200,11 @@ public class PlaceholdersReg {
                 return PlaceholderResult.value(Placeholders.parseText(
                         claim.getValue().hasPermission(ctx.player()) ? canBuildText : cantBuildText,
                         Placeholders.PREDEFINED_PLACEHOLDER_PATTERN,
-                        Map.of("owners", Text.literal(String.join(", ", owners)),
-                                "owners_uuid", Text.literal(String.join(", ", ownersUuid)),
-                                "trusted", Text.literal(String.join(", ", trusted)),
-                                "trusted_uuid", Text.literal(String.join(", ", trustedUuid)),
-                                "anchor", Text.literal(claim.getValue().getOrigin().toShortString())
+                        Map.of("owners", Component.literal(String.join(", ", owners)),
+                                "owners_uuid", Component.literal(String.join(", ", ownersUuid)),
+                                "trusted", Component.literal(String.join(", ", trusted)),
+                                "trusted_uuid", Component.literal(String.join(", ", trustedUuid)),
+                                "anchor", Component.literal(claim.getValue().getOrigin().toShortString())
                         )));
             }
         });

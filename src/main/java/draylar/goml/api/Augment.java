@@ -1,10 +1,10 @@
 package draylar.goml.api;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -17,19 +17,19 @@ public interface Augment {
         };
     }
 
-    default void onPlayerEnter(Claim claim, PlayerEntity player) {
+    default void onPlayerEnter(Claim claim, Player player) {
 
     }
 
-    default void onPlayerExit(Claim claim, PlayerEntity player) {
+    default void onPlayerExit(Claim claim, Player player) {
 
     }
 
-    default void tick(Claim claim, World world) {
+    default void tick(Claim claim, Level world) {
 
     }
 
-    default void playerTick(Claim claim, PlayerEntity player) {
+    default void playerTick(Claim claim, Player player) {
 
     }
 
@@ -41,7 +41,7 @@ public interface Augment {
         return false;
     }
 
-    default boolean canPlace(Claim claim, World world, BlockPos pos) {
+    default boolean canPlace(Claim claim, Level world, BlockPos pos) {
         return true;
     }
 
@@ -49,14 +49,14 @@ public interface Augment {
         return false;
     }
 
-    default void openSettings(Claim claim, ServerPlayerEntity player, @Nullable Runnable closeCallback) {
+    default void openSettings(Claim claim, ServerPlayer player, @Nullable Runnable closeCallback) {
     }
 
-    default boolean isEnabled(Claim claim, World world) {
+    default boolean isEnabled(Claim claim, Level world) {
         return true;
     }
 
-    default Text getAugmentName() {
-        return Text.literal("<unknown>");
+    default Component getAugmentName() {
+        return Component.literal("<unknown>");
     }
 }

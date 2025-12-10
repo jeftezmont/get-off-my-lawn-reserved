@@ -5,10 +5,9 @@ import draylar.goml.compat.webmap.player.PlayerRecord;
 import draylar.goml.api.ClaimBox;
 import draylar.goml.api.ClaimUtils;
 import eu.pb4.polymer.core.api.block.PolymerHeadBlock;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.Text;
-import net.minecraft.server.world.ServerWorld;
-
+import net.minecraft.server.level.ServerLevel;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,7 +61,7 @@ public final class ClaimMarker {
 			""";
 
 	private final Claim claim;
-	private final ServerWorld world;
+	private final ServerLevel world;
 	private final ClaimBox claimBox;
 	private final String id;
 	private final String setId;
@@ -134,7 +133,7 @@ public final class ClaimMarker {
 		return this.claim;
 	}
 
-	public ServerWorld getWorld() {
+	public ServerLevel getWorld() {
 		return this.world;
 	}
 
@@ -198,7 +197,7 @@ public final class ClaimMarker {
 	}
 
 	private static String getLocalizedLabel(String key) {
-		Text text = Text.translatable("text.goml.webmap.label." + key);
+		Component text = Component.translatable("text.goml.webmap.label." + key);
 		return text == null ? "" : text.getString();
 	}
 }

@@ -6,11 +6,10 @@ import de.bluecolored.bluemap.api.markers.ExtrudeMarker;
 import de.bluecolored.bluemap.api.markers.MarkerSet;
 import de.bluecolored.bluemap.api.math.Color;
 import de.bluecolored.bluemap.api.math.Shape;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Box;
-
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.AABB;
 
 public class BluemapCompat extends WebmapCompat {
     private static final BluemapCompat INSTANCE = new BluemapCompat();
@@ -62,7 +61,7 @@ public class BluemapCompat extends WebmapCompat {
             return;
         }
 
-        for (ServerWorld world : getServer().getWorlds()) {
+        for (ServerLevel world : getServer().getAllLevels()) {
             api.getWorld(world).ifPresent(blueWorld -> blueWorld.getMaps().forEach(this::ensureMarkerSet));
         }
 
@@ -76,7 +75,7 @@ public class BluemapCompat extends WebmapCompat {
             return;
         }
 
-        for (ServerWorld world : getServer().getWorlds()) {
+        for (ServerLevel world : getServer().getAllLevels()) {
             api.getWorld(world).ifPresent(blueWorld -> blueWorld.getMaps().forEach(map -> map.getMarkerSets().remove(MARKER_SET_ID)));
         }
     }
@@ -102,7 +101,7 @@ public class BluemapCompat extends WebmapCompat {
     }
 
     private ExtrudeMarker renderMapMarker(ClaimMarker marker) {
-        Box box = marker.getClaimBox().minecraftBox();
+        AABB box = marker.getClaimBox().minecraftBox();
         Shape shape = Shape.createRect(box.minX, box.minZ, box.maxX, box.maxZ);
         float minY = (float) box.minY;
         float maxY = (float) Math.max(box.maxY, box.minY + 1);

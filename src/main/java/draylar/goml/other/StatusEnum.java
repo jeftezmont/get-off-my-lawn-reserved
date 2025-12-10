@@ -1,18 +1,18 @@
 package draylar.goml.other;
 
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.text.Text;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.Locale;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 
 @ApiStatus.Internal
 public interface StatusEnum<T> {
     Item getIcon();
     T getNext();
     T getPrevious();
-    Text getName();
+    Component getName();
 
     enum TargetPlayer implements StatusEnum<TargetPlayer> {
         EVERYONE,
@@ -47,8 +47,8 @@ public interface StatusEnum<T> {
             };
         }
 
-        public Text getName() {
-            return Text.translatable("text.goml.mode." + this.name().toLowerCase(Locale.ROOT));
+        public Component getName() {
+            return Component.translatable("text.goml.mode." + this.name().toLowerCase(Locale.ROOT));
         }
     }
 
@@ -72,8 +72,8 @@ public interface StatusEnum<T> {
 
         }
 
-        public Text getName() {
-            return Text.translatable("text.goml.mode." + this.name().toLowerCase(Locale.ROOT));
+        public Component getName() {
+            return Component.translatable("text.goml.mode." + this.name().toLowerCase(Locale.ROOT));
         }
     }
 }

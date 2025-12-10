@@ -4,13 +4,13 @@ import com.mojang.authlib.GameProfile;
 import draylar.goml.GetOffMyLawn;
 import draylar.goml.registry.GOMLBlocks;
 import eu.pb4.common.protection.api.ProtectionProvider;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.world.World;
-import net.minecraft.world.explosion.Explosion;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,7 +19,7 @@ public final class GomlProtectionProvider implements ProtectionProvider {
     private GomlProtectionProvider() {}
 
     @Override
-    public boolean isProtected(World world, BlockPos pos) {
+    public boolean isProtected(Level world, BlockPos pos) {
         if (world.getServer() == null) {
             return false;
         }
@@ -27,15 +27,15 @@ public final class GomlProtectionProvider implements ProtectionProvider {
     }
 
     @Override
-    public boolean isAreaProtected(World world, Box box) {
+    public boolean isAreaProtected(Level world, AABB box) {
         if (world.getServer() == null) {
             return false;
         }
-        return ClaimUtils.getClaimsInBox(world, BlockPos.ofFloored(box.minX, box.minY, box.minZ), BlockPos.ofFloored(box.maxX, box.maxY, box.maxZ)).isNotEmpty();
+        return ClaimUtils.getClaimsInBox(world, BlockPos.containing(box.minX, box.minY, box.minZ), BlockPos.containing(box.maxX, box.maxY, box.maxZ)).isNotEmpty();
     }
 
     @Override
-    public boolean canBreakBlock(World world, BlockPos pos, GameProfile profile, @Nullable PlayerEntity player) {
+    public boolean canBreakBlock(Level world, BlockPos pos, GameProfile profile, @Nullable Player player) {
         if (world.getServer() == null) {
             return true;
         }
@@ -49,7 +49,7 @@ public final class GomlProtectionProvider implements ProtectionProvider {
     }
 
     @Override
-    public boolean canExplodeBlock(World world, BlockPos pos, Explosion explosion, GameProfile profile, @Nullable PlayerEntity player) {
+    public boolean canExplodeBlock(Level world, BlockPos pos, Explosion explosion, GameProfile profile, @Nullable Player player) {
         if (world.getServer() == null) {
             return true;
         }
@@ -57,12 +57,12 @@ public final class GomlProtectionProvider implements ProtectionProvider {
     }
 
     @Override
-    public boolean canPlaceBlock(World world, BlockPos pos, GameProfile profile, @Nullable PlayerEntity player) {
+    public boolean canPlaceBlock(Level world, BlockPos pos, GameProfile profile, @Nullable Player player) {
         return this.canBreakBlock(world, pos, profile, player);
     }
 
     @Override
-    public boolean canInteractBlock(World world, BlockPos pos, GameProfile profile, @Nullable PlayerEntity player) {
+    public boolean canInteractBlock(Level world, BlockPos pos, GameProfile profile, @Nullable Player player) {
         if (world.getServer() == null) {
             return true;
         }
@@ -70,21 +70,21 @@ public final class GomlProtectionProvider implements ProtectionProvider {
     }
 
     @Override
-    public boolean canInteractEntity(World world, Entity entity, GameProfile profile, @Nullable PlayerEntity player) {
+    public boolean canInteractEntity(Level world, Entity entity, GameProfile profile, @Nullable Player player) {
         if (world.getServer() == null) {
             return true;
         }
-        return GetOffMyLawn.CONFIG.canInteract(entity) || this.canBreakBlock(world, entity.getBlockPos(), profile, player);
+        return GetOffMyLawn.CONFIG.canInteract(entity) || this.canBreakBlock(world, entity.blockPosition(), profile, player);
     }
 
     @Override
-    public boolean canDamageEntity(World world, Entity entity, GameProfile profile, @Nullable PlayerEntity player) {
+    public boolean canDamageEntity(Level world, Entity entity, GameProfile profile, @Nullable Player player) {
         if (world.getServer() == null) {
             return true;
         }
 
-        if (entity instanceof PlayerEntity attackedPlayer) {
-            var claims = ClaimUtils.getClaimsAt(world, entity.getBlockPos());
+        if (entity instanceof Player attackedPlayer) {
+            var claims = ClaimUtils.getClaimsAt(world, entity.blockPosition());
 
             if (claims.isEmpty()) {
                 return true;
@@ -115,7 +115,7 @@ public final class GomlProtectionProvider implements ProtectionProvider {
             }
         }
 
-        return this.canBreakBlock(world, entity.getBlockPos(), profile, player)
-                || (GetOffMyLawn.CONFIG.allowDamagingUnnamedHostileMobs && entity instanceof HostileEntity && entity.getCustomName() == null);
+        return this.canBreakBlock(world, entity.blockPosition(), profile, player)
+                || (GetOffMyLawn.CONFIG.allowDamagingUnnamedHostileMobs && entity instanceof Monster && entity.getCustomName() == null);
     }
 }

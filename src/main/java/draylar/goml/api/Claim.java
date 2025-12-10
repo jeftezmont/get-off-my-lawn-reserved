@@ -17,26 +17,26 @@ import draylar.goml.ui.ClaimPlayerListGui;
 import draylar.goml.ui.PagedGui;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.screen.ScreenHandlerType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Uuids;
-import net.minecraft.util.dynamic.Codecs;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,7 +57,7 @@ public class Claim {
     public static final String CUSTOM_DATA_KEY = "CustomData";
     private static final String BOX_KEY = "Box";
 
-    private static final Codec<Map<Identifier, NbtElement>> CUSTOM_DATA_CODEC = Codec.unboundedMap(Identifier.CODEC, Codecs.NBT_ELEMENT);
+    private static final Codec<Map<Identifier, Tag>> CUSTOM_DATA_CODEC = Codec.unboundedMap(Identifier.CODEC, ExtraCodecs.NBT);
 
     private final Set<UUID> owners = new HashSet<>();
     private final Set<UUID> trusted = new HashSet<>();
@@ -77,7 +77,7 @@ public class Claim {
     private int chunksLoadedCount;
     private final Map<BlockPos, Augment> augments = new HashMap<>();
 
-    private final List<PlayerEntity> previousTickPlayers = new ArrayList<>();
+    private final List<Player> previousTickPlayers = new ArrayList<>();
     private boolean destroyed = false;
     private boolean updatable = false;
 
@@ -89,16 +89,16 @@ public class Claim {
         this.origin = origin;
     }
 
-    public boolean isOwner(PlayerEntity player) {
-        return isOwner(player.getUuid());
+    public boolean isOwner(Player player) {
+        return isOwner(player.getUUID());
     }
 
     public boolean isOwner(UUID uuid) {
         return owners.contains(uuid);
     }
 
-    public void addOwner(PlayerEntity player) {
-        addOwner(player.getUuid());
+    public void addOwner(Player player) {
+        addOwner(player.getUUID());
     }
 
     public void addOwner(UUID id) {
@@ -106,8 +106,8 @@ public class Claim {
         onUpdated();
     }
 
-    public boolean hasPermission(PlayerEntity player) {
-        return hasPermission(player.getUuid());
+    public boolean hasPermission(Player player) {
+        return hasPermission(player.getUUID());
     }
 
     public boolean hasPermission(UUID uuid) {
@@ -123,8 +123,8 @@ public class Claim {
         return owners.contains(uuid) || trusted.contains(uuid);
     }
 
-    public void trust(PlayerEntity player) {
-        trust(player.getUuid());
+    public void trust(Player player) {
+        trust(player.getUUID());
     }
 
     public void trust(UUID uuid) {
@@ -137,8 +137,8 @@ public class Claim {
         group.addClaim(this);
     }
 
-    public void untrust(PlayerEntity player) {
-        untrust(player.getUuid());
+    public void untrust(Player player) {
+        untrust(player.getUUID());
     }
 
     public void untrust(PlayerGroup group) {
@@ -178,30 +178,30 @@ public class Claim {
     }
 
     /**
-     * Serializes this {@link Claim} to a {@link NbtCompound} and returns it.
+     * Serializes this {@link Claim} to a {@link CompoundTag} and returns it.
      *
      * <p>The following tags are stored at the top level of the tag:
      * <ul>
      * <li>"Owners" - list of {@link UUID}s of claim owners
      * <li>"Pos" - origin {@link BlockPos} of claim
      *
-     * @return  this object serialized to a {@link NbtCompound}
+     * @return  this object serialized to a {@link CompoundTag}
      */
-    public void writeData(WriteView view) {
+    public void writeData(ValueOutput view) {
         // collect owner UUIDs into list
-        var ownersTag = view.getListAppender(OWNERS_KEY, Uuids.INT_STREAM_CODEC);
+        var ownersTag = view.list(OWNERS_KEY, UUIDUtil.CODEC);
         for (UUID ownerUUID : owners) {
             ownersTag.add(ownerUUID);
         }
 
         // collect trusted UUIDs into list
-        var trustedTag = view.getListAppender(TRUSTED_KEY, Uuids.INT_STREAM_CODEC);
+        var trustedTag = view.list(TRUSTED_KEY, UUIDUtil.CODEC);
         for (UUID trustedUUID : trusted) {
             trustedTag.add(trustedUUID);
         }
 
         // collect trusted UUIDs into list
-        var trustedGroupsTag = view.getListAppender(TRUSTED_GROUP_KEY, Codec.STRING);
+        var trustedGroupsTag = view.list(TRUSTED_GROUP_KEY, Codec.STRING);
         if (this.trustedGroups != null) {
             for (var group : this.trustedGroups) {
                 if (group.canSave()) {
@@ -217,11 +217,11 @@ public class Claim {
         }
         view.putLong(POSITION_KEY, origin.asLong());
         if (this.icon != null) {
-            view.put(ICON_KEY, ItemStack.OPTIONAL_CODEC, this.icon);
+            view.store(ICON_KEY, ItemStack.OPTIONAL_CODEC, this.icon);
         }
-        view.putString(TYPE_KEY, Registries.BLOCK.getId(this.type).toString());
+        view.putString(TYPE_KEY, BuiltInRegistries.BLOCK.getKey(this.type).toString());
 
-        var customData = new HashMap<Identifier, NbtElement>();
+        var customData = new HashMap<Identifier, Tag>();
 
         for (var entry : this.customData.entrySet()) {
             var value = entry.getKey().serializer().apply(entry.getValue());
@@ -231,43 +231,43 @@ public class Claim {
             }
         }
 
-        view.put(CUSTOM_DATA_KEY, CUSTOM_DATA_CODEC, customData);
+        view.store(CUSTOM_DATA_KEY, CUSTOM_DATA_CODEC, customData);
 
 
-        var augments = view.getList(AUGMENTS_KEY);
+        var augments = view.childrenList(AUGMENTS_KEY);
 
         for (var entry : this.augments.entrySet()) {
-            var value = augments.add();
-            value.put("Pos", NbtCompound.CODEC, LegacyNbtHelper.fromBlockPos(entry.getKey()));
+            var value = augments.addChild();
+            value.store("Pos", CompoundTag.CODEC, LegacyNbtHelper.fromBlockPos(entry.getKey()));
             value.putString("Type", GOMLAugments.getId(entry.getValue()).toString());
         }
 
-        this.claimBox.writeData(view.get(BOX_KEY));
+        this.claimBox.writeData(view.child(BOX_KEY));
     }
 
     @ApiStatus.Internal
-    public static Claim readData(MinecraftServer server, ReadView view, int version) {
+    public static Claim readData(MinecraftServer server, ValueInput view, int version) {
         // Collect UUID of owners
         Set<UUID> ownerUUIDs = new HashSet<>();
-        for (var ownerUUID : view.getTypedListView(OWNERS_KEY, Uuids.INT_STREAM_CODEC)) {
+        for (var ownerUUID : view.listOrEmpty(OWNERS_KEY, UUIDUtil.CODEC)) {
             ownerUUIDs.add(ownerUUID);
         }
 
         // Collect UUID of trusted
         Set<UUID> trustedUUIDs = new HashSet<>();
-        for (var trustedUUID : view.getTypedListView(TRUSTED_KEY, Uuids.INT_STREAM_CODEC)) {
+        for (var trustedUUID : view.listOrEmpty(TRUSTED_KEY, UUIDUtil.CODEC)) {
             trustedUUIDs.add(trustedUUID);
         }
 
-        var claim = new Claim(server, ownerUUIDs, trustedUUIDs, BlockPos.fromLong(view.getLong(POSITION_KEY, 0)));
+        var claim = new Claim(server, ownerUUIDs, trustedUUIDs, BlockPos.of(view.getLongOr(POSITION_KEY, 0)));
 
-        for (var string : view.getTypedListView(TRUSTED_GROUP_KEY, Codec.STRING)) {
+        for (var string : view.listOrEmpty(TRUSTED_GROUP_KEY, Codec.STRING)) {
             claim.trustedGroupKeys.add(PlayerGroup.Key.of(string));
         }
 
         claim.icon = view.read(ICON_KEY, ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
-        if (!view.getString(TYPE_KEY, "").isEmpty()) {
-            var block = Registries.BLOCK.get(Identifier.tryParse(view.getString(TYPE_KEY, "")));
+        if (!view.getStringOr(TYPE_KEY, "").isEmpty()) {
+            var block = BuiltInRegistries.BLOCK.getValue(Identifier.tryParse(view.getStringOr(TYPE_KEY, "")));
             if (block instanceof ClaimAnchorBlock anchorBlock) {
                 claim.type = anchorBlock;
             }
@@ -288,12 +288,12 @@ public class Claim {
         if (version == 0) {
             claim.claimBox = ClaimBox.EMPTY;
         } else {
-            claim.claimBox = ClaimBox.readData(view.getReadView(BOX_KEY), 0);
+            claim.claimBox = ClaimBox.readData(view.childOrEmpty(BOX_KEY), 0);
         }
 
-        for (var value : view.getListReadView(AUGMENTS_KEY)) {
-            var pos = LegacyNbtHelper.toBlockPos(value.read("Pos", NbtCompound.CODEC).orElseGet(NbtCompound::new));
-            var type = GOMLAugments.get(Identifier.tryParse(value.getString("Type", "")));
+        for (var value : view.childrenListOrEmpty(AUGMENTS_KEY)) {
+            var pos = LegacyNbtHelper.toBlockPos(value.read("Pos", CompoundTag.CODEC).orElseGet(CompoundTag::new));
+            var type = GOMLAugments.get(Identifier.tryParse(value.getStringOr("Type", "")));
 
             if (pos != null && type != null) {
                 claim.augments.put(pos, type);
@@ -308,25 +308,25 @@ public class Claim {
     }
 
     public Identifier getWorld() {
-        return this.world != null ? this.world : Identifier.of("undefined");
+        return this.world != null ? this.world : Identifier.parse("undefined");
     }
 
     @Nullable
-    public ServerWorld getWorldInstance(MinecraftServer server) {
-        return server.getWorld(RegistryKey.of(RegistryKeys.WORLD, getWorld()));
+    public ServerLevel getWorldInstance(MinecraftServer server) {
+        return server.getLevel(ResourceKey.create(Registries.DIMENSION, getWorld()));
     }
 
     @Nullable
     @Deprecated
     public ClaimAnchorBlockEntity getBlockEntityInstance(MinecraftServer server) {
-        if (server.getWorld(RegistryKey.of(RegistryKeys.WORLD, getWorld())).getBlockEntity(this.origin) instanceof ClaimAnchorBlockEntity claimAnchorBlock) {
+        if (server.getLevel(ResourceKey.create(Registries.DIMENSION, getWorld())).getBlockEntity(this.origin) instanceof ClaimAnchorBlockEntity claimAnchorBlock) {
             return claimAnchorBlock;
         }
         return null;
     }
 
     public ItemStack getIcon() {
-        return this.icon != null ? this.icon.copy() : Items.STONE.getDefaultStack();
+        return this.icon != null ? this.icon.copy() : Items.STONE.getDefaultInstance();
     }
 
     @Nullable
@@ -360,17 +360,17 @@ public class Claim {
         return Collections.unmodifiableCollection(this.customData.keySet());
     }
 
-    public void openUi(ServerPlayerEntity player) {
-        var gui = new SimpleGui(ScreenHandlerType.HOPPER, player, false);
-        gui.setTitle(Text.translatable("text.goml.gui.claim.title"));
+    public void openUi(ServerPlayer player) {
+        var gui = new SimpleGui(MenuType.HOPPER, player, false);
+        gui.setTitle(Component.translatable("text.goml.gui.claim.title"));
 
         gui.addSlot(GuiElementBuilder.from(this.icon)
-                .setName(Text.translatable("text.goml.gui.claim.about"))
-                .setLore(ClaimUtils.getClaimText(player.getEntityWorld().getServer(), this))
+                .setName(Component.translatable("text.goml.gui.claim.about"))
+                .setLore(ClaimUtils.getClaimText(player.level().getServer(), this))
         );
 
         gui.addSlot(new GuiElementBuilder(Items.PLAYER_HEAD)
-                .setName(Text.translatable("text.goml.gui.claim.players").formatted(Formatting.WHITE))
+                .setName(Component.translatable("text.goml.gui.claim.players").withStyle(ChatFormatting.WHITE))
                 .setCallback((x, y, z) -> {
                     PagedGui.playClickSound(player);
                     ClaimPlayerListGui.open(player, this, ClaimUtils.isInAdminMode(player), () -> openUi(player));
@@ -378,7 +378,7 @@ public class Claim {
         );
 
         gui.addSlot(new GuiElementBuilder(Items.PLAYER_HEAD)
-                .setName(Text.translatable("text.goml.gui.claim.augments").formatted(Formatting.WHITE))
+                .setName(Component.translatable("text.goml.gui.claim.augments").withStyle(ChatFormatting.WHITE))
                 .setSkullOwner(GOMLTextures.ANGELIC_AURA)
                 .setCallback((x, y, z) -> {
                     PagedGui.playClickSound(player);
@@ -388,7 +388,7 @@ public class Claim {
 
         if (this.type == GOMLBlocks.ADMIN_CLAIM_ANCHOR.getFirst()) {
             gui.addSlot(new GuiElementBuilder(Items.PLAYER_HEAD)
-                    .setName(Text.translatable("text.goml.gui.admin_settings").formatted(Formatting.WHITE))
+                    .setName(Component.translatable("text.goml.gui.admin_settings").withStyle(ChatFormatting.WHITE))
                     .setSkullOwner("eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmY3YTQyMmRiMzVkMjhjZmI2N2U2YzE2MTVjZGFjNGQ3MzAwNzI0NzE4Nzc0MGJhODY1Mzg5OWE0NGI3YjUyMCJ9fX0=")
                     .setCallback((x, y, z) -> {
                         PagedGui.playClickSound(player);
@@ -454,16 +454,16 @@ public class Claim {
     }
 
     @ApiStatus.Internal
-    public void internal_updateChunkCount(ServerWorld world) {
-        var minX = ChunkSectionPos.getSectionCoord(this.claimBox.toBox().x1());
-        var minZ = ChunkSectionPos.getSectionCoord(this.claimBox.toBox().z1());
+    public void internal_updateChunkCount(ServerLevel world) {
+        var minX = SectionPos.blockToSectionCoord(this.claimBox.toBox().x1());
+        var minZ = SectionPos.blockToSectionCoord(this.claimBox.toBox().z1());
 
-        var maxX = ChunkSectionPos.getSectionCoord(this.claimBox.toBox().x2());
-        var maxZ = ChunkSectionPos.getSectionCoord(this.claimBox.toBox().z2());
+        var maxX = SectionPos.blockToSectionCoord(this.claimBox.toBox().x2());
+        var maxZ = SectionPos.blockToSectionCoord(this.claimBox.toBox().z2());
 
         for (var x = minX; x <= maxX; x++) {
             for (var z = minZ; z <= maxZ; z++) {
-                if (world.isChunkLoaded(x, z)) {
+                if (world.hasChunk(x, z)) {
                     this.chunksLoadedCount++;
                 }
             }
@@ -534,8 +534,8 @@ public class Claim {
         return this.destroyed;
     }
 
-    public Collection<ServerPlayerEntity> getPlayersIn(MinecraftServer server) {
-        var world = server.getWorld(RegistryKey.of(RegistryKeys.WORLD, this.world));
+    public Collection<ServerPlayer> getPlayersIn(MinecraftServer server) {
+        var world = server.getLevel(ResourceKey.create(Registries.DIMENSION, this.world));
 
         if (world == null) {
             return Collections.emptyList();
@@ -545,7 +545,7 @@ public class Claim {
         return world.getPlayers(x -> x.getBoundingBox().intersects(box));
     }
 
-    public void tick(ServerWorld world) {
+    public void tick(ServerLevel world) {
         if (this.chunksLoadedCount > 0) {
             var box = this.claimBox.minecraftBox();
             var playersInClaim = world.getPlayers(x -> x.getBoundingBox().intersects(box));

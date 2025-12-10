@@ -4,18 +4,18 @@ import com.jamieswhiteshirt.rtree3i.ConfigurationBuilder;
 import com.jamieswhiteshirt.rtree3i.RTreeMap;
 import draylar.goml.api.Claim;
 import draylar.goml.api.ClaimBox;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.world.World;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
 public class WorldClaimComponent implements ClaimComponent {
 
     private RTreeMap<ClaimBox, Claim> claims = RTreeMap.create(new ConfigurationBuilder().star().build(), ClaimBox::toBox);
-    private final World world;
+    private final Level world;
 
-    public WorldClaimComponent(World world) {
+    public WorldClaimComponent(Level world) {
         this.world = world;
     }
 
@@ -35,21 +35,21 @@ public class WorldClaimComponent implements ClaimComponent {
     }
 
     @Override
-    public void readData(ReadView view) {
+    public void readData(ValueInput view) {
         this.claims = RTreeMap.create(new ConfigurationBuilder().star().build(), ClaimBox::rtree3iBox);
-        var world = this.world.getRegistryKey().getValue();
+        var world = this.world.dimension().identifier();
 
-        var version = view.getInt("Version", 0);
-        var nbtList = view.getListReadView("Claims");
+        var version = view.getIntOr("Version", 0);
+        var nbtList = view.childrenListOrEmpty("Claims");
 
         if (version == 0) {
             nbtList.forEach(child -> {
-                ClaimBox box = boxFromTag(child.getReadView("Box"));
+                ClaimBox box = boxFromTag(child.childOrEmpty("Box"));
                 if (box != null) {
-                    Claim claimInfo = Claim.readData(this.world.getServer(), child.getReadView("Info"), version);
+                    Claim claimInfo = Claim.readData(this.world.getServer(), child.childOrEmpty("Info"), version);
                     claimInfo.internal_setWorld(world);
                     claimInfo.internal_setClaimBox(box);
-                    if (this.world instanceof ServerWorld world1) {
+                    if (this.world instanceof ServerLevel world1) {
                         claimInfo.internal_updateChunkCount(world1);
                     }
                     claimInfo.internal_enableUpdates();
@@ -60,7 +60,7 @@ public class WorldClaimComponent implements ClaimComponent {
             nbtList.forEach(child -> {
                 Claim claimInfo = Claim.readData(this.world.getServer(), child, version);
                 claimInfo.internal_setWorld(world);
-                if (this.world instanceof ServerWorld world1) {
+                if (this.world instanceof ServerLevel world1) {
                     claimInfo.internal_updateChunkCount(world1);
                 }
                 claimInfo.internal_enableUpdates();
@@ -70,15 +70,15 @@ public class WorldClaimComponent implements ClaimComponent {
     }
 
     @Override
-    public void writeData(WriteView view) {
-        var nbtListClaims = view.getList("Claims");
+    public void writeData(ValueOutput view) {
+        var nbtListClaims = view.childrenList("Claims");
         view.putInt("Version", 1);
-        claims.values().forEach(claim -> claim.writeData(nbtListClaims.add()));
+        claims.values().forEach(claim -> claim.writeData(nbtListClaims.addChild()));
     }
 
     @Nullable
     @Deprecated
-    public ClaimBox boxFromTag(ReadView tag) {
+    public ClaimBox boxFromTag(ValueInput tag) {
         return ClaimBox.readData(tag, 0);
     }
 }

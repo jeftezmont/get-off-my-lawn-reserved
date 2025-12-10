@@ -4,16 +4,15 @@ import com.mojang.authlib.GameProfile;
 import draylar.goml.api.group.PlayerGroup;
 import draylar.goml.api.group.PlayerGroupProvider;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
-import net.minecraft.server.PlayerConfigEntry;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 
 public class GenericPlayerAndGroupSelectionGui extends GenericPlayerSelectionGui {
     private final Predicate<PlayerGroup> shouldDisplayGroup;
@@ -21,8 +20,8 @@ public class GenericPlayerAndGroupSelectionGui extends GenericPlayerSelectionGui
     private final List<PlayerGroup> groups = new ArrayList<>();
 
 
-    public GenericPlayerAndGroupSelectionGui(ServerPlayerEntity player, Text title, Predicate<PlayerConfigEntry> shouldDisplay,
-                                             Predicate<PlayerGroup> shouldDisplayGroup, Consumer<PlayerConfigEntry> onClick, Consumer<PlayerGroup> onClickGroup, Runnable postClose) {
+    public GenericPlayerAndGroupSelectionGui(ServerPlayer player, Component title, Predicate<NameAndId> shouldDisplay,
+                                             Predicate<PlayerGroup> shouldDisplayGroup, Consumer<NameAndId> onClick, Consumer<PlayerGroup> onClickGroup, Runnable postClose) {
         super(player, title, shouldDisplay, onClick, postClose);
         this.shouldDisplayGroup = shouldDisplayGroup;
         this.onClickGroup = onClickGroup;
@@ -48,9 +47,9 @@ public class GenericPlayerAndGroupSelectionGui extends GenericPlayerSelectionGui
     protected DisplayElement getGroupElement(int id) {
         var group = this.groups.get(id);
         var b = GuiElementBuilder.from(group.icon())
-                .setName(Text.empty().append(group.selfDisplayName()).append(Text.literal(" (").formatted(Formatting.DARK_GRAY)
-                                .append(Text.empty().append(group.provider().getName()).setStyle(Style.EMPTY.withColor(0x45abff))
-                                        .append(Text.literal(")").formatted(Formatting.DARK_GRAY)))
+                .setName(Component.empty().append(group.selfDisplayName()).append(Component.literal(" (").withStyle(ChatFormatting.DARK_GRAY)
+                                .append(Component.empty().append(group.provider().getName()).setStyle(Style.EMPTY.withColor(0x45abff))
+                                        .append(Component.literal(")").withStyle(ChatFormatting.DARK_GRAY)))
                         )
                 )
                 .hideDefaultTooltip()

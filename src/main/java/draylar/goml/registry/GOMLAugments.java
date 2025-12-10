@@ -4,8 +4,7 @@ import com.google.common.collect.HashBiMap;
 import draylar.goml.api.Augment;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 

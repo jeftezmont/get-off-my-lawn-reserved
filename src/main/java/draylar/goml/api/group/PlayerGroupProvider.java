@@ -1,10 +1,10 @@
 package draylar.goml.api.group;
 
 import draylar.goml.other.GomlObjects;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ public interface PlayerGroupProvider {
         return null;
     }
 
-    static Collection<PlayerGroup> getShared(ServerPlayerEntity player, UUID id) {
+    static Collection<PlayerGroup> getShared(ServerPlayer player, UUID id) {
         var list = new ArrayList<PlayerGroup>();
         for (var provider : getAll()) {
             var g = provider.getGroupOf(player);
@@ -45,7 +45,7 @@ public interface PlayerGroupProvider {
         return list;
     }
 
-    static Collection<PlayerGroup> getAllGroups(ServerPlayerEntity player) {
+    static Collection<PlayerGroup> getAllGroups(ServerPlayer player) {
         var list = new ArrayList<PlayerGroup>();
         for (var provider : getAll()) {
             var g = provider.getGroupOf(player);
@@ -57,7 +57,7 @@ public interface PlayerGroupProvider {
     }
 
     @Nullable
-    PlayerGroup getGroupOf(PlayerEntity player);
+    PlayerGroup getGroupOf(Player player);
 
     @Nullable
     PlayerGroup getGroupOf(MinecraftServer server, UUID uuid);
@@ -65,6 +65,6 @@ public interface PlayerGroupProvider {
     @Nullable
     PlayerGroup fromKey(MinecraftServer server, PlayerGroup.Key key);
 
-    Text getName();
+    Component getName();
 
 }

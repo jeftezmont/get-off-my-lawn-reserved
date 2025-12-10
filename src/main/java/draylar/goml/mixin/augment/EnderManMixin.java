@@ -1,14 +1,12 @@
 package draylar.goml.mixin.augment;
 
-import draylar.goml.api.Claim;
 import draylar.goml.api.ClaimUtils;
-import draylar.goml.block.entity.ClaimAnchorBlockEntity;
 import draylar.goml.registry.GOMLBlocks;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.mob.EndermanEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -16,20 +14,20 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(EndermanEntity.class)
-public abstract class EndermanEntityMixin extends HostileEntity {
+@Mixin(EnderMan.class)
+public abstract class EnderManMixin extends Monster {
 
-    private EndermanEntityMixin(EntityType<? extends HostileEntity> entityType, World world) {
+    private EnderManMixin(EntityType<? extends Monster> entityType, Level world) {
         super(entityType, world);
     }
 
     @Inject(
-            method = "teleportTo(DDD)Z",
+            method = "teleport(DDD)Z",
             at = @At("HEAD"),
             cancellable = true
     )
     private void goml$attemptTeleport(double x, double y, double z, CallbackInfoReturnable<Boolean> cir) {
-        boolean b = ClaimUtils.getClaimsAt(this.getEntityWorld(), this.getBlockPos())
+        boolean b = ClaimUtils.getClaimsAt(this.level(), this.blockPosition())
                 .anyMatch(claim -> claim.getValue().hasAugment(GOMLBlocks.ENDER_BINDING.getFirst()));
 
         if (b) {
@@ -37,13 +35,13 @@ public abstract class EndermanEntityMixin extends HostileEntity {
         }
     }
 
-    @Mixin(targets = {"net/minecraft/entity/mob/EndermanEntity$PlaceBlockGoal"})
-    public static abstract class PlaceBlockGoalMixin extends Goal {
-        @Shadow @Final private EndermanEntity enderman;
+    @Mixin(targets = {"net/minecraft/world/entity/monster/EnderMan$EndermanLeaveBlockGoal"})
+    public static abstract class EndermanLeaveBlockGoalMixin extends Goal {
+        @Shadow @Final private EnderMan enderman;
 
-        @Inject(method = "canStart", at = @At("HEAD"), cancellable = true)
+        @Inject(method = "canUse", at = @At("HEAD"), cancellable = true)
         private void goml$cancelInClaim(CallbackInfoReturnable<Boolean> cir) {
-            boolean b = ClaimUtils.getClaimsAt(this.enderman.getEntityWorld(), this.enderman.getBlockPos())
+            boolean b = ClaimUtils.getClaimsAt(this.enderman.level(), this.enderman.blockPosition())
                     .anyMatch(claim -> claim.getValue().hasAugment(GOMLBlocks.ENDER_BINDING.getFirst()));
 
             if (b) {
@@ -52,13 +50,13 @@ public abstract class EndermanEntityMixin extends HostileEntity {
         }
     }
 
-    @Mixin(targets = {"net/minecraft/entity/mob/EndermanEntity$PickUpBlockGoal"})
-    public static abstract class PickBlockGoalMixin extends Goal {
-        @Shadow @Final private EndermanEntity enderman;
+    @Mixin(targets = {"net/minecraft/world/entity/monster/EnderMan$EndermanTakeBlockGoal"})
+    public static abstract class EndermanTakeBlockGoalMixin extends Goal {
+        @Shadow @Final private EnderMan enderman;
 
-        @Inject(method = "canStart", at = @At("HEAD"), cancellable = true)
+        @Inject(method = "canUse", at = @At("HEAD"), cancellable = true)
         private void goml$cancelInClaim(CallbackInfoReturnable<Boolean> cir) {
-            boolean b = ClaimUtils.getClaimsAt(this.enderman.getEntityWorld(), this.enderman.getBlockPos())
+            boolean b = ClaimUtils.getClaimsAt(this.enderman.level(), this.enderman.blockPosition())
                     .anyMatch(claim -> claim.getValue().hasAugment(GOMLBlocks.ENDER_BINDING.getFirst()));
 
             if (b) {

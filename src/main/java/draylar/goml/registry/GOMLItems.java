@@ -4,16 +4,15 @@ import draylar.goml.GetOffMyLawn;
 import draylar.goml.block.ClaimAnchorBlock;
 import draylar.goml.item.GogglesItem;
 import draylar.goml.item.UpgradeKitItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 
 public class GOMLItems {
     public static List<Item> BASE_ITEMS = new ArrayList<>();
@@ -30,11 +29,11 @@ public class GOMLItems {
         return register(name, (s) -> new UpgradeKitItem(s, from, to, item));
     }
 
-    private static <T extends Item> T register(String name, Function<Item.Settings, T> item) {
+    private static <T extends Item> T register(String name, Function<Item.Properties, T> item) {
         var id = GetOffMyLawn.id(name);
-        var value = item.apply(new Item.Settings().registryKey(RegistryKey.of(RegistryKeys.ITEM, id)));
+        var value = item.apply(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id)));
         BASE_ITEMS.add(value);
-        return Registry.register(Registries.ITEM, id, value);
+        return Registry.register(BuiltInRegistries.ITEM, id, value);
     }
 
     public static void init() {

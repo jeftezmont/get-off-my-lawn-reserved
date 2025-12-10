@@ -1,18 +1,17 @@
 package draylar.goml.api;
 
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-
 import java.util.ArrayList;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 
 // Original implementation https://github.com/NucleoidMC/plasmid/blob/1.16/src/main/java/xyz/nucleoid/plasmid/map/workspace/editor/ParticleOutlineRenderer.java
 public class WorldParticleUtils {
-    public static void render(ServerPlayerEntity player, BlockPos min, BlockPos max, ParticleEffect effect) {
+    public static void render(ServerPlayer player, BlockPos min, BlockPos max, ParticleOptions effect) {
         Edge[] edges = edges(min, max);
 
         int maxInterval = 5;
@@ -23,7 +22,7 @@ public class WorldParticleUtils {
 
             double interval = 1;
             if (length > 0) {
-                interval = MathHelper.clamp(length / Math.min(maxCount, length), 1, maxInterval);
+                interval = Mth.clamp(length / Math.min(maxCount, length), 1, maxInterval);
             }
 
             double steps = (length + interval - 1) / interval;
@@ -37,11 +36,11 @@ public class WorldParticleUtils {
         }
     }
 
-    private static void spawnParticleIfVisible(ServerPlayerEntity player, ParticleEffect effect, double x, double y, double z) {
-        ServerWorld world = player.getEntityWorld();
+    private static void spawnParticleIfVisible(ServerPlayer player, ParticleOptions effect, double x, double y, double z) {
+        ServerLevel world = player.level();
 
-        Vec3d delta = player.getEntityPos().subtract(x, y, z);
-        double length2 = delta.lengthSquared();
+        Vec3 delta = player.position().subtract(x, y, z);
+        double length2 = delta.lengthSqr();
         if (length2 > 512 * 512) {
             return;
         }
@@ -52,7 +51,7 @@ public class WorldParticleUtils {
             return;
         }*/
 
-        world.spawnParticles(
+        world.sendParticles(
                 player, effect, true, true,
                 x, y, z,
                 1,
@@ -91,7 +90,7 @@ public class WorldParticleUtils {
 
         var height = (max.getY() - min.getY());
 
-        var count = MathHelper.ceil(height / 64d);
+        var count = Mth.ceil(height / 64d);
 
         var delta = height / count;
 
@@ -123,7 +122,7 @@ public class WorldParticleUtils {
             int dx = this.endX - this.startX;
             int dy = this.endY - this.startY;
             int dz = this.endZ - this.startZ;
-            return MathHelper.ceil(Math.sqrt(dx * dx + dy * dy + dz * dz));
+            return Mth.ceil(Math.sqrt(dx * dx + dy * dy + dz * dz));
         }
     }
 }
