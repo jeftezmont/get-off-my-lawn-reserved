@@ -93,7 +93,7 @@ public class GetOffMyLawn implements ModInitializer, WorldComponentInitializer {
             ArgonautsCompat.init();
         }
 
-        ServerLifecycleEvents.SERVER_STARTED.register(WebmapCompat::init);
+        //ServerLifecycleEvents.SERVER_STARTED.register(WebmapCompat::init);
 
         ServerChunkEvents.CHUNK_LOAD.register((world, server) -> GetOffMyLawn.onChunkEvent(world, server, Claim::internal_incrementChunks));
         ServerChunkEvents.CHUNK_UNLOAD.register((world, server) -> GetOffMyLawn.onChunkEvent(world, server, Claim::internal_decrementChunks));
